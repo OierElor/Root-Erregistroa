@@ -1,0 +1,9 @@
+# Zure datuak: ez igo inoiz biltegi batera
+root.db
+root.db-wal
+root.db-shm
+backups/
+*.rootsync
+
+__pycache__/
+.pytest_cache/

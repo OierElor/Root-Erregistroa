@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="eu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Root Erregistroa</title>
+<style>
+  :root {
+    --atzea: #16130f; --panela: #211c16; --panela2: #2b241b;
+    --marra: #3d3427; --testua: #ede4d4; --lausoa: #a6977f;
+    --nabar: #d9a441; --berde: #6fae5c; --gorri: #c9553f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--atzea); color: var(--testua);
+         font: 15px/1.5 system-ui, "Segoe UI", sans-serif; }
+  header { background: var(--panela); border-bottom: 2px solid var(--nabar);
+           padding: 14px 20px; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .5px; }
+  h1 span { color: var(--nabar); }
+  .gailua { color: var(--lausoa); font-size: 13px; margin-left: auto; }
+  nav { display: flex; gap: 4px; padding: 0 20px; background: var(--panela);
+        border-bottom: 1px solid var(--marra); flex-wrap: wrap; }
+  nav button { background: none; border: none; border-bottom: 3px solid transparent;
+               color: var(--lausoa); padding: 10px 14px; cursor: pointer; font-size: 14px; }
+  nav button.aktibo { color: var(--nabar); border-bottom-color: var(--nabar); }
+  main { padding: 20px; max-width: 1100px; margin: 0 auto; }
+  section { display: none; }
+  section.ikusgai { display: block; }
+  .txartela { background: var(--panela); border: 1px solid var(--marra);
+              border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .txartela h2 { margin: 0 0 12px; font-size: 16px; color: var(--nabar); }
+  .txartela h3 { margin: 16px 0 8px; font-size: 14px; color: var(--lausoa); }
+  label { display: block; font-size: 12px; color: var(--lausoa); margin-bottom: 3px; }
+  input, select, textarea, button { font: inherit; }
+  input, select, textarea {
+    background: var(--panela2); border: 1px solid var(--marra); border-radius: 5px;
+    color: var(--testua); padding: 7px 9px; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--nabar); outline-offset: -1px; }
+  .lerroa { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+  .lerroa > div { flex: 1; min-width: 120px; }
+  .botoia { background: var(--nabar); color: #241c0d; border: none; border-radius: 5px;
+            padding: 8px 16px; cursor: pointer; font-weight: 600; width: auto; }
+  .botoia.isila { background: var(--panela2); color: var(--testua); border: 1px solid var(--marra); }
+  .botoia.arriskua { background: var(--gorri); color: #fff; }
+  .botoia:disabled { opacity: .5; cursor: not-allowed; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--lausoa); font-weight: 500; font-size: 12px;
+       border-bottom: 1px solid var(--marra); padding: 6px 8px; }
+  td { padding: 6px 8px; border-bottom: 1px solid #2a241c; }
+  tr:last-child td { border-bottom: none; }
+  .barra { height: 6px; background: var(--panela2); border-radius: 3px; overflow: hidden; min-width: 60px; }
+  .barra > i { display: block; height: 100%; background: var(--nabar); }
+  .fakzio-punto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+  .irabazlea { color: var(--nabar); font-weight: 600; }
+  .partida { border: 1px solid var(--marra); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px;
+             background: var(--panela2); }
+  .partida header { background: none; border: none; padding: 0 0 6px; font-size: 13px; color: var(--lausoa); }
+  .oharra { font-size: 13px; color: var(--lausoa); margin-top: 6px; }
+  .abisua { background: #3a2a14; border-left: 3px solid var(--nabar); padding: 10px 12px;
+            border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
+  .mezua { padding: 10px 12px; border-radius: 5px; margin-bottom: 12px; font-size: 14px; }
+  .mezua.ondo { background: #23361f; border-left: 3px solid var(--berde); }
+  .mezua.gaizki { background: #3a1f1a; border-left: 3px solid var(--gorri); }
+  .taula-bilgarria { overflow-x: auto; }
+  .zerrenda-tresnak { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
+  .kide { display: flex; justify-content: space-between; padding: 6px 0;
+          border-bottom: 1px solid #2a241c; font-size: 14px; }
+  .txiki { font-size: 12px; color: var(--lausoa); }
+  .zenb { font-variant-numeric: tabular-nums; }
+  .laburpen-sareta { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .laburpen-sareta div { background: var(--panela2); border-radius: 6px; padding: 10px 12px; }
+  .laburpen-sareta b { display: block; font-size: 22px; color: var(--nabar); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Root <span>Erregistroa</span></h1>
+  <div class="gailua" id="gailu-info"></div>
+</header>
+
+<nav>
+  <button data-atala="partidak" class="aktibo">Partidak</button>
+  <button data-atala="berria">Partida berria</button>
+  <button data-atala="estatistikak">Estatistikak</button>
+  <button data-atala="sinkro">Sinkronizazioa</button>
+  <button data-atala="babeskopiak">Babeskopiak</button>
+</nav>
+
+<main>
+  <div id="mezua"></div>
+
+  <section id="atal-partidak" class="ikusgai">
+    <div class="txartela">
+      <div class="laburpen-sareta" id="laburpena"></div>
+    </div>
+    <div class="txartela">
+      <h2>Partidak</h2>
+      <div class="zerrenda-tresnak">
+        <div><label>Jokalaria</label><select id="ir-jokalaria"></select></div>
+        <div><label>Fakzioa</label><select id="ir-fakzioa"></select></div>
+        <div><label>Mapa</label><select id="ir-mapa"></select></div>
+        <button class="botoia isila" id="ir-garbitu">Garbitu</button>
+      </div>
+      <div id="partida-zerrenda"></div>
+    </div>
+  </section>
+
+  <section id="atal-berria">
+    <div class="txartela">
+      <h2 id="form-izenburua">Partida berria</h2>
+      <div class="lerroa">
+        <div><label>Data</label><input type="date" id="f-data"></div>
+        <div><label>Mapa</label><select id="f-mapa"></select></div>
+        <div><label>Karta sorta</label><select id="f-sorta"></select></div>
+      </div>
+      <h3>Jokalariak</h3>
+      <div id="f-jokalariak"></div>
+      <button class="botoia isila" id="f-gehitu">+ Jokalaria</button>
+      <div style="margin-top:14px">
+        <label>Oharrak</label>
+        <textarea id="f-oharrak" rows="2" placeholder="Adib. koalizioa, gertaera bereziak…"></textarea>
+      </div>
+      <div style="margin-top:14px; display:flex; gap:8px">
+        <button class="botoia" id="f-gorde">Gorde partida</button>
+        <button class="botoia isila" id="f-hutsik">Formularioa hustu</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="atal-estatistikak">
+    <div class="txartela">
+      <h2>Jokalarien sailkapena</h2>
+      <div class="taula-bilgarria"><table id="est-jokalariak"></table></div>
+    </div>
+    <div class="txartela">
+      <h2>Fakzioak</h2>
+      <div class="taula-bilgarria"><table id="est-fakzioak"></table></div>
+    </div>
+    <div class="txartela">
+      <h2>Jokalaria eta fakzioa</h2>
+      <div class="taula-bilgarria"><table id="est-matrizea"></table></div>
+    </div>
+  </section>
+
+  <section id="atal-sinkro">
+    <div class="txartela">
+      <h2>Taldea</h2>
+      <div class="abisua">
+        Taldearen <b>izena eta pasaesaldia</b> berdinak dituzten ordenagailu guztiek
+        elkarrekin sinkronizatzen dute. Ez dago zerbitzaririk: datuak zuzenean doaz
+        batetik bestera, zifratuta. Pasaesaldia ahoz eman lagunei, ez sarean bidali.
+      </div>
+      <div id="talde-egoera"></div>
+      <div class="lerroa">
+        <div><label>Taldearen izena</label><input id="t-izena" placeholder="Adib. Aramaixoko basoa"></div>
+        <div><label>Pasaesaldia (gutx. 8 karaktere)</label><input type="password" id="t-pasa"></div>
+        <button class="botoia" id="t-gorde">Ezarri</button>
+      </div>
+    </div>
+
+    <div class="txartela">
+      <h2>Sare lokaleko kideak</h2>
+      <div id="kide-zerrenda" class="txiki">Bilatzen…</div>
+      <div style="margin-top:12px; display:flex; gap:8px">
+        <button class="botoia" id="s-orain">Orain sinkronizatu</button>
+        <button class="botoia isila" id="s-gailu-izena">Gailuari izena aldatu</button>
+      </div>
+      <div id="sinkro-emaitza" class="txiki" style="margin-top:10px"></div>
+    </div>
+
+    <div class="txartela">
+      <h2>Fitxategi bidezko trukea</h2>
+      <p class="txiki">Sare lokalean ez zaudetenerako: esportatu fitxategi zifratua eta
+      bidali nahi duzun bidetik (USB, posta, hodeia). Taldeko pasaesaldirik gabe ez du balio.</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <button class="botoia" id="s-esportatu">Esportatu .rootsync</button>
+        <button class="botoia isila" id="s-inportatu-botoia">Inportatu fitxategia</button>
+        <input type="file" id="s-fitxategia" accept=".rootsync,.rootbackup" style="display:none">
+      </div>
+    </div>
+  </section>
+
+  <section id="atal-babeskopiak">
+    <div class="txartela">
+      <h2>Babeskopiak</h2>
+      <p class="txiki" id="kopia-karpeta"></p>
+      <div style="display:flex; gap:8px; margin-bottom:14px">
+        <button class="botoia" id="b-egin">Babeskopia orain</button>
+        <button class="botoia isila" id="b-birsortu">Erregistrotik berreraiki</button>
+      </div>
+      <div class="taula-bilgarria"><table id="kopia-taula"></table></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const TOKENA = "__SAIO_TOKENA__";
+let DATUAK = { jokalariak: [], fakzioak: [], mapak: [], karta_sortak: [], garaipen_motak: [] };
+
+// ─── Laguntzaileak ─────────────────────────────────────────────────────────
+// Testua BETI textContent bidez sartzen da, inoiz ez innerHTML: erregistroko
+// datuak beste ordenagailu batetik etor daitezke.
+
+function el(etiketa, ezaugarriak = {}, umeak = []) {
+  const n = document.createElement(etiketa);
+  for (const [g, b] of Object.entries(ezaugarriak)) {
+    if (g === "klasea") n.className = b;
+    else if (g === "testua") n.textContent = b;
+    else if (g === "estiloa") n.style.cssText = b;
+    else if (g.startsWith("on")) n.addEventListener(g.slice(2), b);
+    else if (b !== null && b !== undefined) n.setAttribute(g, b);
+  }
+  for (const ume of [].concat(umeak)) if (ume) n.appendChild(ume);
+  return n;
+}
+
+async function api(bidea, aukerak = {}) {
+  const erantzuna = await fetch(bidea, {
+    ...aukerak,
+    headers: { "Content-Type": "application/json", "X-Root-Token": TOKENA, ...(aukerak.headers || {}) },
+  });
+  const mota = erantzuna.headers.get("Content-Type") || "";
+  if (!mota.includes("application/json")) {
+    if (!erantzuna.ok) throw new Error("Errorea: " + erantzuna.status);
+    return erantzuna;
+  }
+  const datuak = await erantzuna.json();
+  if (!erantzuna.ok) throw new Error(datuak.errorea || "Errore ezezaguna");
+  return datuak;
+}
+
+function mezua(testua, ondo = true) {
+  const eremua = document.getElementById("mezua");
+  eremua.textContent = "";
+  eremua.appendChild(el("div", { klasea: "mezua " + (ondo ? "ondo" : "gaizki"), testua }));
+  if (ondo) setTimeout(() => { eremua.textContent = ""; }, 5000);
+}
+
+function aukerak(select, elementuak, balioGakoa, izenGakoa, hutsa) {
+  select.textContent = "";
+  if (hutsa !== undefined) select.appendChild(el("option", { value: "", testua: hutsa }));
+  for (const e of elementuak) {
+    select.appendChild(el("option", { value: e[balioGakoa], testua: e[izenGakoa] }));
+  }
+}
+
+// ─── Nabigazioa ────────────────────────────────────────────────────────────
+
+document.querySelectorAll("nav button").forEach(botoia => {
+  botoia.onclick = () => {
+    document.querySelectorAll("nav button").forEach(b => b.classList.remove("aktibo"));
+    botoia.classList.add("aktibo");
+    document.querySelectorAll("section").forEach(s => s.classList.remove("ikusgai"));
+    document.getElementById("atal-" + botoia.dataset.atala).classList.add("ikusgai");
+    if (botoia.dataset.atala === "estatistikak") estatistikakKargatu();
+    if (botoia.dataset.atala === "sinkro") sinkroKargatu();
+    if (botoia.dataset.atala === "babeskopiak") kopiakKargatu();
+  };
+});
+
+// ─── Hasiera ───────────────────────────────────────────────────────────────
+
+async function hasieratu() {
+  DATUAK = await api("/api/hasiera");
+  document.getElementById("gailu-info").textContent =
+    `${DATUAK.sinkro.gailu_izena} · ${DATUAK.sinkro.taldea || "talderik gabe"}`;
+
+  aukerak(document.getElementById("f-mapa"), DATUAK.mapak, "kodea", "izena", "— mapa —");
+  aukerak(document.getElementById("f-sorta"), DATUAK.karta_sortak, "kodea", "izena", "— sorta —");
+  aukerak(document.getElementById("ir-jokalaria"), DATUAK.jokalariak, "id", "izena", "Jokalari guztiak");
+  aukerak(document.getElementById("ir-fakzioa"), DATUAK.fakzioak, "kodea", "izena", "Fakzio guztiak");
+  aukerak(document.getElementById("ir-mapa"), DATUAK.mapak, "kodea", "izena", "Mapa guztiak");
+
+  const l = DATUAK.laburpena;
+  const laburpena = document.getElementById("laburpena");
+  laburpena.textContent = "";
+  for (const [izena, balioa] of [
+    ["Partidak", l.partidak], ["Jokalariak", l.jokalariak],
+    ["Azken partida", l.azken_partida || "—"], ["Gertaerak", l.gertaerak],
+  ]) {
+    laburpena.appendChild(el("div", {}, [
+      el("b", { testua: String(balioa) }), el("span", { klasea: "txiki", testua: izena }),
+    ]));
+  }
+  if (!document.getElementById("f-data").value) {
+    document.getElementById("f-data").value = new Date().toISOString().slice(0, 10);
+  }
+  if (!document.querySelector("#f-jokalariak .jokalari-lerroa")) {
+    jokalariLerroaGehitu(); jokalariLerroaGehitu();
+  }
+  await partidakKargatu();
+}
+
+// ─── Partiden zerrenda ─────────────────────────────────────────────────────
+
+async function partidakKargatu() {
+  const p = new URLSearchParams();
+  for (const [gakoa, id] of [["jokalari_id", "ir-jokalaria"], ["fakzio_kodea", "ir-fakzioa"], ["mapa_kodea", "ir-mapa"]]) {
+    const balioa = document.getElementById(id).value;
+    if (balioa) p.set(gakoa, balioa);
+  }
+  const { partidak } = await api("/api/partidak?" + p.toString());
+  const edukiontzia = document.getElementById("partida-zerrenda");
+  edukiontzia.textContent = "";
+
+  if (!partidak.length) {
+    edukiontzia.appendChild(el("p", { klasea: "txiki", testua: "Ez dago partidarik oraindik." }));
+    return;
+  }
+
+  for (const partida of partidak) {
+    const goiburua = [partida.data, mapaIzena(partida.mapa_kodea)].filter(Boolean).join(" · ");
+    const taula = el("table");
+    for (const j of partida.jokalariak) {
+      taula.appendChild(el("tr", {}, [
+        el("td", {}, [
+          el("span", { klasea: "fakzio-punto", estiloa: `background:${j.fakzio_kolorea || "#666"}` }),
+          el("span", { testua: j.jokalari_izena || "?" }),
+        ]),
+        el("td", { klasea: "txiki", testua: j.fakzio_izena || "—" }),
+        el("td", { klasea: "zenb", testua: j.puntuak === null ? "—" : String(j.puntuak) }),
+        el("td", { klasea: j.irabazlea ? "irabazlea" : "txiki",
+                   testua: j.irabazlea ? "Irabazlea" + (j.garaipen_mota ? ` (${j.garaipen_mota})` : "") : "" }),
+      ]));
+    }
+    edukiontzia.appendChild(el("div", { klasea: "partida" }, [
+      el("header", {}, [
+        el("span", { testua: goiburua }),
+        el("button", {
+          klasea: "botoia isila", estiloa: "float:right;padding:2px 10px;font-size:12px",
+          testua: "Ezabatu",
+          onclick: async () => {
+            if (!confirm("Partida hau ezabatu?")) return;
+            try {
+              await api("/api/partidak/" + encodeURIComponent(partida.id), { method: "DELETE" });
+              mezua("Partida ezabatuta."); await hasieratu();
+            } catch (e) { mezua(e.message, false); }
+          },
+        }),
+      ]),
+      taula,
+      partida.oharrak ? el("div", { klasea: "oharra", testua: partida.oharrak }) : null,
+    ]));
+  }
+}
+
+function mapaIzena(kodea) {
+  const m = DATUAK.mapak.find(x => x.kodea === kodea);
+  return m ? m.izena : "";
+}
+
+["ir-jokalaria", "ir-fakzioa", "ir-mapa"].forEach(id => {
+  document.getElementById(id).onchange = () => partidakKargatu().catch(e => mezua(e.message, false));
+});
+document.getElementById("ir-garbitu").onclick = () => {
+  ["ir-jokalaria", "ir-fakzioa", "ir-mapa"].forEach(id => { document.getElementById(id).value = ""; });
+  partidakKargatu();
+};
+
+// ─── Partida berria ────────────────────────────────────────────────────────
+
+function jokalariLerroaGehitu() {
+  const izenLista = el("datalist", { id: "izen-lista" });
+  const lerroa = el("div", { klasea: "lerroa jokalari-lerroa" }, [
+    el("div", {}, [el("label", { testua: "Jokalaria" }),
+      el("input", { klasea: "j-izena", list: "izen-lista", placeholder: "Izena" })]),
+    el("div", {}, [el("label", { testua: "Fakzioa" }), (() => {
+      const s = el("select", { klasea: "j-fakzioa" });
+      aukerak(s, DATUAK.fakzioak, "kodea", "izena", "—");
+      return s;
+    })()]),
+    el("div", { estiloa: "max-width:90px" }, [el("label", { testua: "Puntuak" }),
+      el("input", { type: "number", klasea: "j-puntuak", min: "0", max: "999" })]),
+    el("div", { estiloa: "max-width:120px" }, [el("label", { testua: "Garaipena" }), (() => {
+      const s = el("select", { klasea: "j-mota" });
+      aukerak(s, DATUAK.garaipen_motak.map(m => ({ k: m, i: m })), "k", "i", "—");
+      return s;
+    })()]),
+    el("div", { estiloa: "max-width:80px; text-align:center" }, [
+      el("label", { testua: "Irabazi" }),
+      el("input", { type: "checkbox", klasea: "j-irabazlea", estiloa: "width:auto;height:18px" })]),
+    el("div", { estiloa: "max-width:40px" }, [
+      el("button", { klasea: "botoia isila", testua: "×", onclick: (e) => e.target.closest(".jokalari-lerroa").remove() })]),
+  ]);
+  const eremua = document.getElementById("f-jokalariak");
+  if (!document.getElementById("izen-lista")) {
+    for (const j of DATUAK.jokalariak) izenLista.appendChild(el("option", { value: j.izena }));
+    eremua.appendChild(izenLista);
+  }
+  eremua.appendChild(lerroa);
+}
+
+document.getElementById("f-gehitu").onclick = jokalariLerroaGehitu;
+document.getElementById("f-hutsik").onclick = () => {
+  document.getElementById("f-jokalariak").textContent = "";
+  document.getElementById("f-oharrak").value = "";
+  jokalariLerroaGehitu(); jokalariLerroaGehitu();
+};
+
+document.getElementById("f-gorde").onclick = async () => {
+  const jokalariak = [];
+  for (const lerroa of document.querySelectorAll(".jokalari-lerroa")) {
+    const izena = lerroa.querySelector(".j-izena").value.trim();
+    if (!izena) continue;
+    const puntuak = lerroa.querySelector(".j-puntuak").value;
+    jokalariak.push({
+      izena,
+      fakzio_kodea: lerroa.querySelector(".j-fakzioa").value || null,
+      puntuak: puntuak === "" ? null : parseInt(puntuak, 10),
+      irabazlea: lerroa.querySelector(".j-irabazlea").checked,
+      garaipen_mota: lerroa.querySelector(".j-mota").value || null,
+    });
+  }
+  if (!jokalariak.length) return mezua("Gutxienez jokalari bat sartu behar duzu.", false);
+
+  try {
+    await api("/api/partidak", {
+      method: "POST",
+      body: JSON.stringify({
+        data: document.getElementById("f-data").value,
+        mapa_kodea: document.getElementById("f-mapa").value || null,
+        karta_sorta: document.getElementById("f-sorta").value || null,
+        oharrak: document.getElementById("f-oharrak").value || null,
+        jokalariak,
+      }),
+    });
+    mezua("Partida gordeta.");
+    document.getElementById("f-jokalariak").textContent = "";
+    document.getElementById("f-oharrak").value = "";
+    await hasieratu();
+    jokalariLerroaGehitu(); jokalariLerroaGehitu();
+  } catch (e) { mezua(e.message, false); }
+};
+
+// ─── Estatistikak ──────────────────────────────────────────────────────────
+
+function taulaBete(taula, goiburuak, lerroak) {
+  taula.textContent = "";
+  taula.appendChild(el("tr", {}, goiburuak.map(g => el("th", { testua: g }))));
+  for (const lerroa of lerroak) taula.appendChild(el("tr", {}, lerroa));
+  if (!lerroak.length) {
+    taula.appendChild(el("tr", {}, [el("td", { testua: "Daturik ez oraindik.", klasea: "txiki" })]));
+  }
+}
+
+function tasaGelaxka(tasa) {
+  return el("td", {}, [
+    el("div", { estiloa: "display:flex;align-items:center;gap:8px" }, [
+      el("div", { klasea: "barra", estiloa: "flex:1" }, [el("i", { estiloa: `width:${tasa}%` })]),
+      el("span", { klasea: "zenb txiki", testua: tasa + "%" }),
+    ]),
+  ]);
+}
+
+async function estatistikakKargatu() {
+  try {
+    const e = await api("/api/estatistikak");
+    taulaBete(document.getElementById("est-jokalariak"),
+      ["Jokalaria", "Partidak", "Garaipenak", "Irabazte-tasa", "Puntu ertaina", "Onena"],
+      e.jokalariak.map(j => [
+        el("td", { testua: j.izena }),
+        el("td", { klasea: "zenb", testua: String(j.partidak) }),
+        el("td", { klasea: "zenb", testua: String(j.garaipenak) }),
+        tasaGelaxka(j.tasa),
+        el("td", { klasea: "zenb", testua: j.batez_beste === null ? "—" : String(j.batez_beste) }),
+        el("td", { klasea: "zenb", testua: j.puntu_gehien === null ? "—" : String(j.puntu_gehien) }),
+      ]));
+
+    taulaBete(document.getElementById("est-fakzioak"),
+      ["Fakzioa", "Hedapena", "Aldiak", "Garaipenak", "Irabazte-tasa", "Puntu ertaina"],
+      e.fakzioak.map(f => [
+        el("td", {}, [
+          el("span", { klasea: "fakzio-punto", estiloa: `background:${f.kolorea || "#666"}` }),
+          el("span", { testua: f.izena }),
+        ]),
+        el("td", { klasea: "txiki", testua: f.hedapena || "—" }),
+        el("td", { klasea: "zenb", testua: String(f.partidak) }),
+        el("td", { klasea: "zenb", testua: String(f.garaipenak) }),
+        tasaGelaxka(f.tasa),
+        el("td", { klasea: "zenb", testua: f.batez_beste === null ? "—" : String(f.batez_beste) }),
+      ]));
+
+    taulaBete(document.getElementById("est-matrizea"),
+      ["Jokalaria", "Fakzioa", "Partidak", "Garaipenak", "Tasa"],
+      e.matrizea.map(m => [
+        el("td", { testua: m.jokalaria }),
+        el("td", {}, [
+          el("span", { klasea: "fakzio-punto", estiloa: `background:${m.kolorea || "#666"}` }),
+          el("span", { testua: m.fakzioa }),
+        ]),
+        el("td", { klasea: "zenb", testua: String(m.partidak) }),
+        el("td", { klasea: "zenb", testua: String(m.garaipenak) }),
+        tasaGelaxka(m.tasa),
+      ]));
+  } catch (e) { mezua(e.message, false); }
+}
+
+// ─── Sinkronizazioa ────────────────────────────────────────────────────────
+
+async function sinkroKargatu() {
+  try {
+    const s = await api("/api/sinkro/egoera");
+    const egoera = document.getElementById("talde-egoera");
+    egoera.textContent = "";
+    egoera.appendChild(el("p", { klasea: "txiki", testua: s.taldea
+      ? `Taldea: ${s.taldea} · marka ${s.talde_marka.slice(0, 12)}… · gertaerak: ${s.gertaerak}`
+      : "Ez dago talderik ezarrita. Sinkronizatzeko, ezarri izena eta pasaesaldia." }));
+    if (s.taldea) {
+      egoera.appendChild(el("p", { klasea: "txiki",
+        testua: `Erregistroaren hatz-marka: ${s.hatz_marka.slice(0, 16)}… (berdina bada, sinkronizatuta zaudete)` }));
+    }
+    if (s.taldea) document.getElementById("t-izena").value = s.taldea;
+
+    const kideak = document.getElementById("kide-zerrenda");
+    kideak.textContent = "";
+    if (!s.kideak.length) {
+      kideak.appendChild(el("p", { klasea: "txiki",
+        testua: "Ez da kiderik ikusten sare lokalean. Beste ordenagailuak piztuta eta talde berean egon behar du." }));
+    }
+    for (const k of s.kideak) {
+      kideak.appendChild(el("div", { klasea: "kide" }, [
+        el("span", { testua: `${k.izena || k.gailu_id.slice(0, 8)} · ${k.helbidea}` }),
+        el("span", { klasea: "txiki", testua: `duela ${k.duela}s` }),
+      ]));
+    }
+
+    const emaitza = document.getElementById("sinkro-emaitza");
+    emaitza.textContent = "";
+    if (s.azken_sinkro.noiz) {
+      const laburpena = (s.azken_sinkro.emaitza || [])
+        .map(r => `${r.kidea}: ${r.jasoak} jaso, ${r.bidaliak} bidali`).join(" · ");
+      emaitza.textContent = s.azken_sinkro.errorea
+        ? "Azkena: " + s.azken_sinkro.errorea
+        : "Azkena: " + (laburpena || "aldaketarik ez");
+    }
+  } catch (e) { mezua(e.message, false); }
+}
+
+document.getElementById("t-gorde").onclick = async () => {
+  try {
+    const r = await api("/api/sinkro/taldea", {
+      method: "POST",
+      body: JSON.stringify({
+        izena: document.getElementById("t-izena").value,
+        pasaesaldia: document.getElementById("t-pasa").value,
+      }),
+    });
+    document.getElementById("t-pasa").value = "";
+    mezua(`Taldea ezarrita: ${r.izena}. ${r.oharra}`);
+    await sinkroKargatu(); await hasieratu();
+  } catch (e) { mezua(e.message, false); }
+};
+
+document.getElementById("s-orain").onclick = async (ev) => {
+  ev.target.disabled = true;
+  try {
+    const r = await api("/api/sinkro/orain", { method: "POST" });
+    const jasoak = (r.emaitzak || []).reduce((s, x) => s + x.jasoak, 0);
+    mezua(`Sinkronizatuta: ${r.kideak} kide, ${jasoak} gertaera berri.` +
+          ((r.akatsak || []).length ? " Akatsak: " + r.akatsak.join("; ") : ""));
+    await hasieratu(); await sinkroKargatu();
+  } catch (e) { mezua(e.message, false); } finally { ev.target.disabled = false; }
+};
+
+document.getElementById("s-gailu-izena").onclick = async () => {
+  const izena = prompt("Gailu honen izena:");
+  if (!izena) return;
+  try {
+    await api("/api/gailua", { method: "POST", body: JSON.stringify({ izena }) });
+    mezua("Izena aldatuta."); await hasieratu();
+  } catch (e) { mezua(e.message, false); }
+};
+
+document.getElementById("s-esportatu").onclick = async () => {
+  try {
+    const erantzuna = await fetch("/api/sinkro/esportatu", { headers: { "X-Root-Token": TOKENA } });
+    if (!erantzuna.ok) throw new Error("Esportatzeak huts egin du (talderik ba al dago?)");
+    const blob = await erantzuna.blob();
+    const url = URL.createObjectURL(blob);
+    const lotura = el("a", { href: url, download: "root-erregistroa.rootsync" });
+    document.body.appendChild(lotura); lotura.click(); lotura.remove();
+    URL.revokeObjectURL(url);
+    mezua("Fitxategi zifratua sortuta.");
+  } catch (e) { mezua(e.message, false); }
+};
+
+document.getElementById("s-inportatu-botoia").onclick = () => document.getElementById("s-fitxategia").click();
+document.getElementById("s-fitxategia").onchange = async (ev) => {
+  const fitxategia = ev.target.files[0];
+  if (!fitxategia) return;
+  try {
+    const r = await api("/api/sinkro/inportatu", {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: await fitxategia.arrayBuffer(),
+    });
+    mezua(`Inportatuta: ${r.berriak} gertaera berri (babeskopia egin da aurretik).`);
+    await hasieratu();
+  } catch (e) { mezua(e.message, false); }
+  ev.target.value = "";
+};
+
+// ─── Babeskopiak ───────────────────────────────────────────────────────────
+
+async function kopiakKargatu() {
+  try {
+    const r = await api("/api/babeskopiak");
+    document.getElementById("kopia-karpeta").textContent = "Karpeta: " + r.karpeta;
+    taulaBete(document.getElementById("kopia-taula"), ["Fitxategia", "Tamaina", "Data", ""],
+      r.kopiak.map(k => [
+        el("td", { testua: k.izena }),
+        el("td", { klasea: "zenb txiki", testua: Math.round(k.tamaina / 1024) + " KB" }),
+        el("td", { klasea: "txiki", testua: new Date(k.noiz * 1000).toLocaleString("eu") }),
+        el("td", {}, [el("button", {
+          klasea: "botoia arriskua", estiloa: "padding:3px 10px;font-size:12px", testua: "Leheneratu",
+          onclick: async () => {
+            if (!confirm(`"${k.izena}" leheneratu? Uneko egoeraren kopia bat egingo da lehenik.`)) return;
+            try {
+              const e = await api("/api/babeskopiak/leheneratu", {
+                method: "POST", body: JSON.stringify({ izena: k.izena }),
+              });
+              mezua(`Leheneratuta. Aurreko egoera hemen duzu: ${e.aurreko_kopia}`);
+              await hasieratu(); await kopiakKargatu();
+            } catch (err) { mezua(err.message, false); }
+          },
+        })]),
+      ]));
+  } catch (e) { mezua(e.message, false); }
+}
+
+document.getElementById("b-egin").onclick = async () => {
+  try {
+    const r = await api("/api/babeskopiak", { method: "POST" });
+    mezua("Babeskopia eginda: " + r.izena);
+    await kopiakKargatu();
+  } catch (e) { mezua(e.message, false); }
+};
+
+document.getElementById("b-birsortu").onclick = async () => {
+  if (!confirm("Taulak gertaera-erregistrotik berreraiki? Ez da daturik galtzen.")) return;
+  try {
+    const r = await api("/api/birsortu", { method: "POST" });
+    mezua(`Berreraikita: ${r.entitateak} elementu.`);
+    await hasieratu();
+  } catch (e) { mezua(e.message, false); }
+};
+
+// ─── Abiaraztea ────────────────────────────────────────────────────────────
+
+hasieratu().catch(e => mezua(e.message, false));
+setInterval(() => {
+  if (document.getElementById("atal-sinkro").classList.contains("ikusgai")) sinkroKargatu();
+}, 10000);
+</script>
+</body>
+</html>
