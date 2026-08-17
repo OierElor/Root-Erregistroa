@@ -123,6 +123,7 @@
       </div>
       <div style="margin-top:14px; display:flex; gap:8px">
         <button class="botoia" id="f-gorde">Gorde partida</button>
+        <button class="botoia isila" id="f-utzi" style="display:none">Utzi edizioa</button>
         <button class="botoia isila" id="f-hutsik">Formularioa hustu</button>
       </div>
     </div>
@@ -197,6 +198,9 @@
 <script>
 const TOKENA = "__SAIO_TOKENA__";
 let DATUAK = { jokalariak: [], fakzioak: [], mapak: [], karta_sortak: [], garaipen_motak: [] };
+// Partida bat editatzen ari bagara, haren identifikatzailea. Gordetzean id hori
+// bidaltzeak partida ordezkatzen du, berri bat sortu beharrean.
+let EDITATZEN = null;
 
 // ─── Laguntzaileak ─────────────────────────────────────────────────────────
 // Testua BETI textContent bidez sartzen da, inoiz ez innerHTML: erregistroko
@@ -247,16 +251,18 @@ function aukerak(select, elementuak, balioGakoa, izenGakoa, hutsa) {
 
 // ─── Nabigazioa ────────────────────────────────────────────────────────────
 
+function atalaErakutsi(izena) {
+  document.querySelectorAll("nav button").forEach(b =>
+    b.classList.toggle("aktibo", b.dataset.atala === izena));
+  document.querySelectorAll("section").forEach(s => s.classList.remove("ikusgai"));
+  document.getElementById("atal-" + izena).classList.add("ikusgai");
+  if (izena === "estatistikak") estatistikakKargatu();
+  if (izena === "sinkro") sinkroKargatu();
+  if (izena === "babeskopiak") kopiakKargatu();
+}
+
 document.querySelectorAll("nav button").forEach(botoia => {
-  botoia.onclick = () => {
-    document.querySelectorAll("nav button").forEach(b => b.classList.remove("aktibo"));
-    botoia.classList.add("aktibo");
-    document.querySelectorAll("section").forEach(s => s.classList.remove("ikusgai"));
-    document.getElementById("atal-" + botoia.dataset.atala).classList.add("ikusgai");
-    if (botoia.dataset.atala === "estatistikak") estatistikakKargatu();
-    if (botoia.dataset.atala === "sinkro") sinkroKargatu();
-    if (botoia.dataset.atala === "babeskopiak") kopiakKargatu();
-  };
+  botoia.onclick = () => atalaErakutsi(botoia.dataset.atala);
 });
 
 // ─── Hasiera ───────────────────────────────────────────────────────────────
@@ -283,11 +289,10 @@ async function hasieratu() {
       el("b", { testua: String(balioa) }), el("span", { klasea: "txiki", testua: izena }),
     ]));
   }
-  if (!document.getElementById("f-data").value) {
-    document.getElementById("f-data").value = new Date().toISOString().slice(0, 10);
-  }
-  if (!document.querySelector("#f-jokalariak .jokalari-lerroa")) {
-    jokalariLerroaGehitu(); jokalariLerroaGehitu();
+  // Editatzen ari bagara, ez ukitu formularioa: sinkronizazio batek erdibidean
+  // idatzitakoa ezabatuko luke bestela.
+  if (!EDITATZEN && !document.querySelector("#f-jokalariak .jokalari-lerroa")) {
+    formularioaBerrezarri();
   }
   await partidakKargatu();
 }
@@ -327,17 +332,25 @@ async function partidakKargatu() {
     edukiontzia.appendChild(el("div", { klasea: "partida" }, [
       el("header", {}, [
         el("span", { testua: goiburua }),
-        el("button", {
-          klasea: "botoia isila", estiloa: "float:right;padding:2px 10px;font-size:12px",
-          testua: "Ezabatu",
-          onclick: async () => {
-            if (!confirm("Partida hau ezabatu?")) return;
-            try {
-              await api("/api/partidak/" + encodeURIComponent(partida.id), { method: "DELETE" });
-              mezua("Partida ezabatuta."); await hasieratu();
-            } catch (e) { mezua(e.message, false); }
-          },
-        }),
+        el("span", { estiloa: "float:right; display:flex; gap:6px" }, [
+          el("button", {
+            klasea: "botoia isila", estiloa: "padding:2px 10px;font-size:12px",
+            testua: "Editatu",
+            onclick: () => partidaEditatu(partida),
+          }),
+          el("button", {
+            klasea: "botoia isila", estiloa: "padding:2px 10px;font-size:12px",
+            testua: "Ezabatu",
+            onclick: async () => {
+              if (!confirm("Partida hau ezabatu?")) return;
+              try {
+                await api("/api/partidak/" + encodeURIComponent(partida.id), { method: "DELETE" });
+                if (EDITATZEN === partida.id) formularioaBerrezarri();
+                mezua("Partida ezabatuta."); await hasieratu();
+              } catch (e) { mezua(e.message, false); }
+            },
+          }),
+        ]),
       ]),
       taula,
       partida.oharrak ? el("div", { klasea: "oharra", testua: partida.oharrak }) : null,
@@ -360,42 +373,80 @@ document.getElementById("ir-garbitu").onclick = () => {
 
 // ─── Partida berria ────────────────────────────────────────────────────────
 
-function jokalariLerroaGehitu() {
-  const izenLista = el("datalist", { id: "izen-lista" });
+function jokalariLerroaGehitu(balioak = null) {
+  const izena = el("input", { klasea: "j-izena", list: "izen-lista", placeholder: "Izena" });
+  const fakzioa = el("select", { klasea: "j-fakzioa" });
+  const puntuak = el("input", { type: "number", klasea: "j-puntuak", min: "0", max: "999" });
+  const mota = el("select", { klasea: "j-mota" });
+  const irabazlea = el("input", {
+    type: "checkbox", klasea: "j-irabazlea", estiloa: "width:auto;height:18px" });
+
+  aukerak(fakzioa, DATUAK.fakzioak, "kodea", "izena", "—");
+  aukerak(mota, DATUAK.garaipen_motak.map(m => ({ k: m, i: m })), "k", "i", "—");
+
+  if (balioak) {
+    izena.value = balioak.jokalari_izena || "";
+    fakzioa.value = balioak.fakzio_kodea || "";
+    puntuak.value = balioak.puntuak === null || balioak.puntuak === undefined ? "" : balioak.puntuak;
+    mota.value = balioak.garaipen_mota || "";
+    irabazlea.checked = !!balioak.irabazlea;
+  }
+
   const lerroa = el("div", { klasea: "lerroa jokalari-lerroa" }, [
-    el("div", {}, [el("label", { testua: "Jokalaria" }),
-      el("input", { klasea: "j-izena", list: "izen-lista", placeholder: "Izena" })]),
-    el("div", {}, [el("label", { testua: "Fakzioa" }), (() => {
-      const s = el("select", { klasea: "j-fakzioa" });
-      aukerak(s, DATUAK.fakzioak, "kodea", "izena", "—");
-      return s;
-    })()]),
-    el("div", { estiloa: "max-width:90px" }, [el("label", { testua: "Puntuak" }),
-      el("input", { type: "number", klasea: "j-puntuak", min: "0", max: "999" })]),
-    el("div", { estiloa: "max-width:120px" }, [el("label", { testua: "Garaipena" }), (() => {
-      const s = el("select", { klasea: "j-mota" });
-      aukerak(s, DATUAK.garaipen_motak.map(m => ({ k: m, i: m })), "k", "i", "—");
-      return s;
-    })()]),
+    el("div", {}, [el("label", { testua: "Jokalaria" }), izena]),
+    el("div", {}, [el("label", { testua: "Fakzioa" }), fakzioa]),
+    el("div", { estiloa: "max-width:90px" }, [el("label", { testua: "Puntuak" }), puntuak]),
+    el("div", { estiloa: "max-width:120px" }, [el("label", { testua: "Garaipena" }), mota]),
     el("div", { estiloa: "max-width:80px; text-align:center" }, [
-      el("label", { testua: "Irabazi" }),
-      el("input", { type: "checkbox", klasea: "j-irabazlea", estiloa: "width:auto;height:18px" })]),
+      el("label", { testua: "Irabazi" }), irabazlea]),
     el("div", { estiloa: "max-width:40px" }, [
-      el("button", { klasea: "botoia isila", testua: "×", onclick: (e) => e.target.closest(".jokalari-lerroa").remove() })]),
+      el("button", { klasea: "botoia isila", testua: "×",
+                     onclick: (e) => e.target.closest(".jokalari-lerroa").remove() })]),
   ]);
+
   const eremua = document.getElementById("f-jokalariak");
   if (!document.getElementById("izen-lista")) {
+    const izenLista = el("datalist", { id: "izen-lista" });
     for (const j of DATUAK.jokalariak) izenLista.appendChild(el("option", { value: j.izena }));
     eremua.appendChild(izenLista);
   }
   eremua.appendChild(lerroa);
+  return lerroa;
 }
 
-document.getElementById("f-gehitu").onclick = jokalariLerroaGehitu;
-document.getElementById("f-hutsik").onclick = () => {
+function formularioaBerrezarri() {
+  EDITATZEN = null;
+  document.getElementById("form-izenburua").textContent = "Partida berria";
+  document.getElementById("f-gorde").textContent = "Gorde partida";
+  document.getElementById("f-utzi").style.display = "none";
   document.getElementById("f-jokalariak").textContent = "";
   document.getElementById("f-oharrak").value = "";
+  document.getElementById("f-data").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("f-mapa").value = "";
+  document.getElementById("f-sorta").value = "";
   jokalariLerroaGehitu(); jokalariLerroaGehitu();
+}
+
+function partidaEditatu(partida) {
+  EDITATZEN = partida.id;
+  document.getElementById("form-izenburua").textContent = `Partida editatzen (${partida.data})`;
+  document.getElementById("f-gorde").textContent = "Aldaketak gorde";
+  document.getElementById("f-utzi").style.display = "";
+  document.getElementById("f-data").value = partida.data;
+  document.getElementById("f-mapa").value = partida.mapa_kodea || "";
+  document.getElementById("f-sorta").value = partida.karta_sorta || "";
+  document.getElementById("f-oharrak").value = partida.oharrak || "";
+  document.getElementById("f-jokalariak").textContent = "";
+  for (const j of partida.jokalariak) jokalariLerroaGehitu(j);
+  atalaErakutsi("berria");
+  window.scrollTo(0, 0);
+}
+
+document.getElementById("f-gehitu").onclick = () => jokalariLerroaGehitu();
+document.getElementById("f-hutsik").onclick = formularioaBerrezarri;
+document.getElementById("f-utzi").onclick = () => {
+  formularioaBerrezarri();
+  atalaErakutsi("partidak");
 };
 
 document.getElementById("f-gorde").onclick = async () => {
@@ -414,10 +465,12 @@ document.getElementById("f-gorde").onclick = async () => {
   }
   if (!jokalariak.length) return mezua("Gutxienez jokalari bat sartu behar duzu.", false);
 
+  const editatzen = EDITATZEN;
   try {
     await api("/api/partidak", {
       method: "POST",
       body: JSON.stringify({
+        id: editatzen,   // hutsik → partida berria; beteta → lehengoa ordezkatu
         data: document.getElementById("f-data").value,
         mapa_kodea: document.getElementById("f-mapa").value || null,
         karta_sorta: document.getElementById("f-sorta").value || null,
@@ -425,11 +478,10 @@ document.getElementById("f-gorde").onclick = async () => {
         jokalariak,
       }),
     });
-    mezua("Partida gordeta.");
-    document.getElementById("f-jokalariak").textContent = "";
-    document.getElementById("f-oharrak").value = "";
+    formularioaBerrezarri();
+    mezua(editatzen ? "Aldaketak gordeta." : "Partida gordeta.");
+    if (editatzen) atalaErakutsi("partidak");
     await hasieratu();
-    jokalariLerroaGehitu(); jokalariLerroaGehitu();
   } catch (e) { mezua(e.message, false); }
 };
 

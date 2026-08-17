@@ -147,39 +147,57 @@ def _idak_atera(edukia: dict) -> set:
 # ─── Protokoloa ─────────────────────────────────────────────────────────────
 
 
+def _nor_naizen() -> dict:
+    """Fardel bakoitzean doan bisita-txartela: nor naizen eta non aurkitu.
+
+    `sync_portua` funtsezkoa da: hartzaileak gu berriro deitzeko modua ematen
+    dio, gure aurkikuntza-seinalea jaso ez badu ere (suebaki batek multicast-a
+    norabide batean blokeatzea ohikoa da).
+    """
+    return {"gailu_izena": konfig.gailu_izena(), "sync_portua": konfig.SYNC_PORTUA}
+
+
 def eskaera_sortu(konn: sqlite3.Connection) -> bytes:
     return fardela_sortu(
-        {
-            "mota": "eskaera",
-            "ezagunak": gertaerak.id_guztiak(konn),
-            "gailu_izena": konfig.gailu_izena(),
-        }
+        {"mota": "eskaera", "ezagunak": gertaerak.id_guztiak(konn), **_nor_naizen()}
     )
 
 
-def eskaera_erantzun(konn: sqlite3.Connection, byteak: bytes) -> bytes:
-    """Beste gailu batek bidalitako eskaera erantzun (zerbitzari rola)."""
+def eskaera_erantzun(konn: sqlite3.Connection, byteak: bytes, kidea_ikusi=None) -> bytes:
+    """Beste gailu batek bidalitako eskaera erantzun (zerbitzari rola).
+
+    `kidea_ikusi` emanez gero, bidaltzailearen datuekin deitzen da: hala,
+    guregana jo duen gailua kide ezagun bihurtzen da berehala.
+    """
     goiburua, edukia = fardela_ireki(konn, byteak)
     mota = edukia.get("mota")
 
+    if mota not in ("eskaera", "bultzada"):
+        raise SinkroErrorea(f"Mezu mota ezezaguna: {mota!r}")
+
+    _gailua_erregistratu(konn, goiburua, edukia.get("gailu_izena"))
+    if kidea_ikusi:
+        kidea_ikusi(
+            {
+                "gailu_id": goiburua.get("gailu_id"),
+                "izena": edukia.get("gailu_izena"),
+                "portua": edukia.get("sync_portua"),
+            }
+        )
+
     if mota == "eskaera":
         haienak = _idak_atera(edukia)
-        _gailua_erregistratu(konn, goiburua, edukia.get("gailu_izena"))
         return fardela_sortu(
             {
                 "mota": "erantzuna",
                 "gertaerak": gertaerak.esportatu(konn, haienak)[:GEHIENEZ_GERTAERA_FARDELEAN],
                 "ezagunak": gertaerak.id_guztiak(konn),
-                "gailu_izena": konfig.gailu_izena(),
+                **_nor_naizen(),
             }
         )
 
-    if mota == "bultzada":
-        emaitza = gertaerak.gehitu(konn, _gertaerak_atera(edukia))
-        _gailua_erregistratu(konn, goiburua, edukia.get("gailu_izena"))
-        return fardela_sortu({"mota": "onartuta", "berriak": emaitza["berriak"]})
-
-    raise SinkroErrorea(f"Mezu mota ezezaguna: {mota!r}")
+    emaitza = gertaerak.gehitu(konn, _gertaerak_atera(edukia))
+    return fardela_sortu({"mota": "onartuta", "berriak": emaitza["berriak"]})
 
 
 def erantzuna_prozesatu(konn: sqlite3.Connection, byteak: bytes) -> dict:
@@ -197,11 +215,7 @@ def erantzuna_prozesatu(konn: sqlite3.Connection, byteak: bytes) -> dict:
     bultzada = None
     if haiei_falta:
         bultzada = fardela_sortu(
-            {
-                "mota": "bultzada",
-                "gertaerak": haiei_falta,
-                "gailu_izena": konfig.gailu_izena(),
-            }
+            {"mota": "bultzada", "gertaerak": haiei_falta, **_nor_naizen()}
         )
 
     return {

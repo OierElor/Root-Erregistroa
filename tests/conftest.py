@@ -13,5 +13,7 @@ from pathlib import Path
 _ALDI_BATERAKOA = tempfile.mkdtemp(prefix="root-testak-")
 os.environ["KONFIG_DIR"] = _ALDI_BATERAKOA
 os.environ["ROOT_KDF_N"] = "10"
+# `app` inportatzeak DB_FILE irakurtzen du: zure benetako erregistroa ez ukitzeko.
+os.environ.setdefault("DB_FILE", os.path.join(_ALDI_BATERAKOA, "testak.db"))
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))

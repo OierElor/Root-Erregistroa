@@ -3,7 +3,8 @@
 Root mahai-jokoaren partiden erregistroa, **zerbitzaririk gabe** sinkronizatzen dena
 taldeko ordenagailu guztien artean, eta babeskopia automatikoekin.
 
-* Partidak sartu: data, mapa, karta sorta, jokalari bakoitzaren fakzioa, puntuak eta garaipen mota.
+* Partidak sartu, **editatu** eta ezabatu: data, mapa, karta sorta, jokalari bakoitzaren
+  fakzioa, puntuak eta garaipen mota.
 * Estatistikak: jokalarien sailkapena, fakzioen irabazte-tasak, jokalari bakoitzak zein
   fakziorekin jokatzen duen ondoen.
 * **Sinkronizazioa zerbitzaririk gabe**: sare lokalean automatikoki, edo fitxategi zifratu
@@ -65,6 +66,22 @@ ulertzen dute elkar.
 
 Bi bideek gauza bera erabiltzen dute barnean, eta biak dira **norabide bikoak**: partidak
 zeinek sartu dituen axola gabe, denek dena amaitzen dute edukitzen.
+
+### Partidak editatzea
+
+Partiden zerrendan, **Editatu** botoiak partida formularioan kargatzen du: data, mapa,
+karta sorta, oharrak eta jokalari guztiak bere puntu eta fakzioekin. Jokalariak kendu
+(× botoia) edo gehitu ditzakezu, eta `Aldaketak gorde` sakatuta partida **ordezkatu**
+egiten da, bat berria sortu gabe. `Utzi edizioa` sakatuta ez da ezer aldatzen.
+
+Editatzea ere sinkronizatu egiten da: aldaketa gertaera berri bat da partida beraren
+gainean, eta ordenagailu guztietara iristen da. Bi lagunek partida bera aldatzen badute
+elkarren berririk izan gabe, bateratzean **biek bertsio berbera** ikusiko dute (azkena
+irabazten du, eta "azkena" zein den denek berdin kalkulatzen dute). Aurreko bertsioak
+erregistroan gordeta geratzen dira, ez dira ezabatzen.
+
+> Partida bat ustekabean ezabatu baduzu, oraindik ez dago desegiteko botoirik: erabili
+> `Babeskopiak` ataleko leheneratzea, edo sartu berriro.
 
 ### Zergatik ez den ezer galtzen
 

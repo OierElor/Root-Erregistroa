@@ -18,6 +18,12 @@ from pathlib import Path
 KONFIG_DIR = Path(
     os.environ.get("KONFIG_DIR", Path.home() / ".config" / "root-erregistroa")
 )
+
+# Sinkronizazio-portua hemen dago (eta ez `sarea.py`-n) `sinkro`-k ere behar
+# duelako: bidaltzen dituen fardeletan sartzen du, hartzaileak jakin dezan gu
+# non aurkitu. Bi moduluek `konfig` inportatzen dute, eta horrek zirkulartasuna
+# saihesten du.
+SYNC_PORTUA = int(os.environ.get("SYNC_PORT", "47778"))
 GAILU_FITX = KONFIG_DIR / "gailua.json"
 TALDE_FITX = KONFIG_DIR / "talde.json"
 EZARPEN_FITX = KONFIG_DIR / "ezarpenak.json"

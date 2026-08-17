@@ -25,13 +25,14 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import db
+import gertaerak
 import konfig
 import kripto
 import sinkro
 
 MULTICAST_TALDEA = "239.255.42.77"
 AURKIKUNTZA_PORTUA = int(os.environ.get("AURKIKUNTZA_PORTUA", "47777"))
-SYNC_PORTUA = int(os.environ.get("SYNC_PORT", "47778"))
+SYNC_PORTUA = konfig.SYNC_PORTUA
 
 SEINALE_TARTEA = 5          # segundo
 SINKRO_TARTEA = 20          # segundo
@@ -69,6 +70,31 @@ def _sinkro_emaitza_gorde(emaitza=None, errorea=None) -> None:
         )
 
 
+def _kidea_gogoratu(gailu_id, izena, helbidea, portua) -> None:
+    """Kide bat kide-zerrendan sartu, aurkikuntza-seinalerik jaso ez badugu ere.
+
+    Norbaitek guri sinkronizazio-eskaera bat egiten digunean, haren helbidea
+    ezagutzen dugu; hortik aurrera guk ere deitu diezaiokegu. Horrek bi arazo
+    konpontzen ditu: abio berrian seinalearen zain egon beharra, eta multicast-a
+    norabide bakarrean iristea.
+    """
+    if not isinstance(gailu_id, str) or not gertaerak.ID_ERED.match(gailu_id or ""):
+        return
+    if gailu_id == konfig.gailu_id():
+        return
+    if not isinstance(portua, int) or isinstance(portua, bool) or not 1 <= portua <= 65535:
+        return
+
+    with _egoera_giltza:
+        _kideak[gailu_id] = {
+            "gailu_id": gailu_id,
+            "izena": str(izena or "")[:60],
+            "helbidea": helbidea,
+            "portua": portua,
+            "azken_ikusia": time.time(),
+        }
+
+
 # ─── Entzulea (kide rola) ───────────────────────────────────────────────────
 
 
@@ -104,7 +130,13 @@ class _SyncKudeatzailea(BaseHTTPRequestHandler):
         gorputza = self.rfile.read(luzera)
         konn = db.konexioa()
         try:
-            erantzuna = sinkro.eskaera_erantzun(konn, gorputza)
+            erantzuna = sinkro.eskaera_erantzun(
+                konn,
+                gorputza,
+                kidea_ikusi=lambda k: _kidea_gogoratu(
+                    k["gailu_id"], k["izena"], self.client_address[0], k["portua"]
+                ),
+            )
             self._erantzun(200, erantzuna)
         except (kripto.KriptoErrorea, sinkro.SinkroErrorea, ValueError):
             # Xehetasunik ez: erantzun desberdinek erasotzaile bati zer den
@@ -163,21 +195,9 @@ def _seinalea_prozesatu(datuak: bytes, helbidea) -> None:
         return
     if seinalea.get("talde_marka") != sinkro.talde_marka():
         return  # beste talde batekoa
-    gailu_id = seinalea.get("gailu_id")
-    if not isinstance(gailu_id, str) or gailu_id == konfig.gailu_id():
-        return
-    portua = seinalea.get("portua")
-    if not isinstance(portua, int) or not 1 <= portua <= 65535:
-        return
-
-    with _egoera_giltza:
-        _kideak[gailu_id] = {
-            "gailu_id": gailu_id,
-            "izena": str(seinalea.get("izena", ""))[:60],
-            "helbidea": helbidea[0],
-            "portua": portua,
-            "azken_ikusia": time.time(),
-        }
+    _kidea_gogoratu(
+        seinalea.get("gailu_id"), seinalea.get("izena"), helbidea[0], seinalea.get("portua")
+    )
 
 
 def _aurkikuntza_haria(gelditu: threading.Event) -> None:

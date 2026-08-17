@@ -172,6 +172,45 @@ def test_jokalari_bera_bi_gailutan_ez_da_bikoizten(tmp_path, monkeypatch, taldea
         ).fetchone()[0] == 2
 
 
+def test_eskaerak_bidaltzailea_kide_bihurtzen_du(tmp_path, monkeypatch, taldea):
+    """Guregana jotzen duen gailua kide ezagun bihurtzen da berehala.
+
+    Bestela sinkronizazioak norabide bakarrean funtzionatuko luke haren
+    aurkikuntza-seinalea iritsi arte (edo inoiz ez, suebaki batek multicast-a
+    norabide batean blokeatzen badu).
+    """
+    import sarea
+
+    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
+    with gailua_bezala(monkeypatch, "gailua-a"):
+        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
+        eskaera = sinkro.eskaera_sortu(ka)
+
+    ikusitakoak = []
+    with gailua_bezala(monkeypatch, "gailua-b"):
+        sinkro.eskaera_erantzun(kb, eskaera, kidea_ikusi=ikusitakoak.append)
+
+    assert len(ikusitakoak) == 1
+    assert ikusitakoak[0]["gailu_id"] == "gailua-a"
+    assert ikusitakoak[0]["portua"] == konfig.SYNC_PORTUA
+
+    sarea._kideak.clear()
+    sarea._kidea_gogoratu("gailua-a", "Ordenagailu-A", "192.168.1.40", konfig.SYNC_PORTUA)
+    assert [k["helbidea"] for k in sarea.kideak()] == ["192.168.1.40"]
+
+
+@pytest.mark.parametrize(
+    "gailu_id,portua",
+    [("gailua-a", 0), ("gailua-a", 99999), ("gailua-a", "47778"), ("../etc", 47778)],
+)
+def test_kide_datu_okerrak_baztertzen_dira(gailu_id, portua):
+    import sarea
+
+    sarea._kideak.clear()
+    sarea._kidea_gogoratu(gailu_id, "izena", "192.168.1.40", portua)
+    assert sarea.kideak() == []
+
+
 # ─── Segurtasuna ────────────────────────────────────────────────────────────
 
 
