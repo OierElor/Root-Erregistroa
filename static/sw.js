@@ -5,7 +5,7 @@
 // (~10 MB) eta erregistroaren kodea gordetzen ditu, lehen bisitaren ondoren
 // sarerik gabe ere ibil dadin.
 
-const CACHE = "root-erregistroa-v2";
+const CACHE = "root-erregistroa-v3";
 
 // Aplikazioaren muina. Python iturriak `../`-tik datoz: mahaigainak eta
 // mobilak fitxategi berberak erabiltzen dituzte, kopiarik gabe.
