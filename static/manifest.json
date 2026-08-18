@@ -1,0 +1,15 @@
+{
+  "name": "Root Erregistroa",
+  "short_name": "Root",
+  "description": "Root mahai-jokoaren partiden erregistroa. Zerbitzaririk gabe: dena telefonoan bertan.",
+  "lang": "eu",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#16130f",
+  "theme_color": "#16130f",
+  "icons": [
+    { "src": "ikonoa.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

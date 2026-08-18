@@ -2,7 +2,9 @@
 <html lang="eu">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16130f">
+<link rel="manifest" href="manifest.json">
 <title>Root Erregistroa</title>
 <style>
   :root {
@@ -84,6 +86,50 @@
   .txipa { display: inline-block; background: var(--panela); border: 1px solid var(--marra);
            border-radius: 10px; padding: 1px 9px; font-size: 12px; color: var(--lausoa);
            margin: 4px 4px 0 0; }
+
+  /* ─── Telefonoa ───────────────────────────────────────────────────────────
+     Partidak mahaian bertan sartzeko: eremu handiagoak (hatzarekin errazago),
+     zutabe bakarra, eta nabigazioa beheko aldean, erpururaino iristen den lekuan. */
+  @media (max-width: 620px) {
+    body { font-size: 16px; padding-bottom: 62px; }
+    header { padding: 10px 14px; gap: 8px; }
+    h1 { font-size: 17px; }
+    .gailua { font-size: 12px; width: 100%; margin-left: 0; }
+
+    /* Nabigazioa behean, finkatuta: esku bakarrez erabiltzeko. */
+    nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+          padding: 0; border-top: 1px solid var(--marra); border-bottom: none;
+          overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+    nav button { flex: 1 0 auto; padding: 12px 12px; font-size: 13px;
+                 border-bottom: none; border-top: 3px solid transparent; }
+    nav button.aktibo { border-top-color: var(--nabar); }
+
+    main { padding: 14px; }
+    .txartela { padding: 12px; border-radius: 6px; }
+
+    /* Formulario-lerroak zutabe bakarrean: telefonoan bi eremu ondoz ondo
+       jartzeak biak estuegi uzten ditu. */
+    .lerroa { gap: 8px; }
+    .lerroa > div { flex: 1 1 100%; min-width: 0; }
+
+    /* Ukitze-eremu handiagoak: 44px da gomendatutako gutxienekoa. */
+    input, select, textarea { padding: 10px; font-size: 16px; }
+    .botoia { padding: 11px 16px; }
+    .zerrenda-tresnak .botoia, .zerrenda-tresnak > div { flex: 1 1 100%; }
+
+    /* Taula zabalak ez du orria zeharka mugitu behar: bilgarriak egiten du. */
+    table { font-size: 13px; }
+    th, td { padding: 6px 5px; }
+
+    .laburpen-sareta { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); }
+    .laburpen-sareta b { font-size: 19px; }
+    .hautaketa { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Telefono estuenak: hautaketa-koadroak ere zutabe bakarrean. */
+  @media (max-width: 400px) {
+    .hautaketa { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -237,6 +283,13 @@
 
 <script>
 const TOKENA = "__SAIO_TOKENA__";
+
+// Bi ingurune, frontend bakarra:
+//   * Mahaigainean `app.py`-k orria zerbitzatzen du eta tokena txertatzen dio.
+//   * Mobilean fitxategi estatikoa da: tokena ordezkatu gabe dago, eta Pythonek
+//     nabigatzailean bertan egiten du lan (Pyodide). Ez dago HTTPrik, beraz ez
+//     dago tokenik behar ere: dena prozesu berean dago.
+const PYODIDE_MODUA = TOKENA.startsWith("__");
 let DATUAK = {
   jokalariak: [], fakzioak: [], mapak: [], karta_sortak: [], garaipen_motak: [],
   mertzenarioak: [], leku_bereziak: [], arloteak: [],
@@ -263,6 +316,12 @@ function el(etiketa, ezaugarriak = {}, umeak = []) {
 }
 
 async function api(bidea, aukerak = {}) {
+  if (PYODIDE_MODUA) {
+    const gorputza = aukerak.body && typeof aukerak.body === "string"
+      ? JSON.parse(aukerak.body) : null;
+    const byteak = aukerak.body instanceof ArrayBuffer ? aukerak.body : null;
+    return RootPy.deitu(bidea, aukerak.method || "GET", gorputza, byteak);
+  }
   const erantzuna = await fetch(bidea, {
     ...aukerak,
     headers: { "Content-Type": "application/json", "X-Root-Token": TOKENA, ...(aukerak.headers || {}) },
@@ -841,16 +900,35 @@ document.getElementById("s-gailu-izena").onclick = async () => {
 
 document.getElementById("s-esportatu").onclick = async () => {
   try {
-    const erantzuna = await fetch("/api/sinkro/esportatu", { headers: { "X-Root-Token": TOKENA } });
-    if (!erantzuna.ok) throw new Error("Esportatzeak huts egin du");
-    const blob = await erantzuna.blob();
-    const url = URL.createObjectURL(blob);
     const izena = `root-erregistroa-${new Date().toISOString().slice(0, 10)}.rootsync`;
+    let blob;
+    if (PYODIDE_MODUA) {
+      const f = await RootPy.deitu("/api/sinkro/esportatu");
+      blob = new Blob([f.testua], { type: "application/json" });
+    } else {
+      const erantzuna = await fetch("/api/sinkro/esportatu", { headers: { "X-Root-Token": TOKENA } });
+      if (!erantzuna.ok) throw new Error("Esportatzeak huts egin du");
+      blob = await erantzuna.blob();
+    }
+
+    // Mobilean partekatze-menua askoz erosoagoa da: Telegramera edo postara
+    // zuzenean doa, deskargen karpetatik bila ibili gabe.
+    const fitxategia = new File([blob], izena, { type: "application/json" });
+    if (navigator.canShare && navigator.canShare({ files: [fitxategia] })) {
+      await navigator.share({ files: [fitxategia], title: "Root Erregistroa" });
+      mezua("Fitxategia partekatuta.");
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
     const lotura = el("a", { href: url, download: izena });
     document.body.appendChild(lotura); lotura.click(); lotura.remove();
     URL.revokeObjectURL(url);
     mezua(`Fitxategia sortuta: ${izena}. Orain bidali lagunei.`);
-  } catch (e) { mezua(e.message, false); }
+  } catch (e) {
+    // Erabiltzaileak partekatze-menua isten badu, ez da errore bat.
+    if (e.name !== "AbortError") mezua(e.message, false);
+  }
 };
 
 document.getElementById("s-inportatu-botoia").onclick = () => document.getElementById("s-fitxategia").click();
@@ -921,7 +999,55 @@ document.getElementById("b-birsortu").onclick = async () => {
 // ─── Abiaraztea ────────────────────────────────────────────────────────────
 
 // Galdeketa periodikorik ez: ez dago atzeko planoan ezer gertatzen denik.
-hasieratu().catch(e => mezua(e.message, false));
+async function abiarazi() {
+  if (!PYODIDE_MODUA) {
+    await hasieratu();
+    return;
+  }
+
+  // Mobila: Python nabigatzailean kargatu behar da ezer erakutsi aurretik.
+  // Lehen aldian pisutsua da (~10 MB); ondoren cachetik dator eta offline dabil.
+  const oharra = document.getElementById("mezua");
+  const erakutsi = (t) => {
+    oharra.textContent = "";
+    oharra.appendChild(el("div", { klasea: "mezua ondo", testua: t }));
+  };
+
+  try {
+    // Mobileko kodea hemen kargatzen da, ez orria irekitzean: mahaigainean
+    // fitxategi hau ez da existitzen ere.
+    erakutsi("Kargatzen…");
+    await new Promise((ondo, gaizki) => {
+      const s = document.createElement("script");
+      s.src = "pyodide-abioa.js";
+      s.onload = ondo;
+      s.onerror = () => gaizki(new Error("ezin izan da mobileko kodea kargatu"));
+      document.head.appendChild(s);
+    });
+
+    await RootPy.abiarazi(erakutsi);
+
+    // Offline erabiltzeko. Mahaigainean ez da erregistratzen: han `app.py` dago.
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {
+        // Offline modua luxua da, ez baldintza: huts eginda ere aplikazioak balio du.
+      });
+    }
+
+    // Babeskopiak ez daude mobilean: fitxategi-sistema behar dute, eta ez dute
+    // zentzurik hemen (mahaigainak ditu kopiak, eta bateratzeak ez du ezer
+    // ezabatzen). Ordezkoa `Esportatu fitxategia` da.
+    document.querySelector('[data-atala="babeskopiak"]').remove();
+    document.getElementById("atal-babeskopiak").remove();
+    oharra.textContent = "";
+    await hasieratu();
+  } catch (e) {
+    erakutsi("");
+    mezua("Ezin izan da abiarazi: " + e.message, false);
+  }
+}
+
+abiarazi();
 </script>
 </body>
 </html>

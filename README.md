@@ -1,7 +1,7 @@
 # 🌲 Root Erregistroa
 
-Root mahai-jokoaren partiden erregistroa: zure ordenagailuan bizi da, fitxategi baten
-bidez partekatzen da lagunekin, eta babeskopia automatikoak ditu. Ez du sarerik, ez
+Root mahai-jokoaren partiden erregistroa: zure gailuan bizi da, fitxategi baten bidez
+partekatzen da lagunekin, eta babeskopia automatikoak ditu. Ez du sarerik, ez
 zerbitzaririk, ez konturik behar.
 
 * Partidak sartu, **editatu** eta ezabatu: data, mapa, karta sorta, jokalari bakoitzaren
@@ -13,6 +13,8 @@ zerbitzaririk, ez konturik behar.
 * **Partekatzea fitxategi bidez**: esportatu, bidali (Telegram, posta, USB), besteak
   inportatu. Bi erregistro batzeak ez du inoiz daturik galtzen.
 * **Babeskopiak**: automatikoak, aldaketa arriskutsuen aurretik, eta eskuz.
+* **Mobilean ere bai** (Android): Python bera nabigatzailean, offline. Ikus
+  [Mobilean](#mobilean-android).
 
 ---
 
@@ -164,10 +166,60 @@ batek ere ez du ezer galtzen.
 
 ---
 
+## Mobilean (Android)
+
+Aplikazio bera telefonoan erabil daiteke, **partidak mahaian bertan sartzeko**. Hemen ere
+ez dago zerbitzaririk: Python bera telefonoaren nabigatzailearen barruan exekutatzen da
+(Pyodide/WASM), eta partidak telefonoan bertan gordetzen dira.
+
+### Nola jarri martxan
+
+Fitxategiak nonbaitetik zerbitzatu behar dira; ezin da `index.html` zuzenean ireki, ez
+baitu biltegia atzitzen uzten. Bi bide:
+
+```bash
+# 1) Etxean probatzeko, ordenagailu berean:
+python3 -m http.server 8000
+#    → http://127.0.0.1:8000/static/index.html
+```
+
+2) **Telefonoan erabiltzeko**: igo karpeta osoa hosting estatiko batera (GitHub Pages,
+   Codeberg Pages…) eta ireki `.../static/index.html`. Nabigatzaileak «pantaila nagusian
+   gehitu» eskainiko dizu: hortik aurrera aplikazio arrunt baten itxura du.
+
+> **Hosting estatikoak ez du zure daturik ikusten.** Kodea baino ez du bidaltzen, behin.
+> Partidak telefonoaren biltegian geratzen dira eta ez dute inoiz gailua uzten: bidaltzen
+> den bakarra zuk eskuz esportatzen duzun `.rootsync` fitxategia da.
+
+Lehen irekialdian ~10 MB deskargatzen dira (Python bera). Gero cachean geratzen da eta
+**offline dabil**: hegazkin-moduan ere partidak sartu ditzakezu.
+
+### Telefonoa eta ordenagailua sinkronizatzea
+
+Lagunekin bezala, fitxategi bidez: telefonoan `Esportatu fitxategia` sakatuta Android-en
+partekatze-menua irekitzen da (Telegram, posta…), eta ordenagailuan `Inportatu fitxategia`.
+Alderantziz berdin. Ez dago konexiorik bien artean.
+
+Telefonoak bere **gailu identifikatzailea** du, ordenagailuak bezala, beraz biek partida
+berbera aldatuta ere bateratzeak emaitza bakarra ematen du.
+
+### Zer EZ dagoen mobilean
+
+* **Babeskopiak**: ez dute zentzurik hor. Ordenagailuak gordetzen ditu kopiak, eta
+  bateratzeak ez du inoiz ezer ezabatzen. Telefonoko datuak babesteko, esportatu.
+* Nabigatzaileko datuak ezaba daitezke biltegia garbitzen baduzu; **esportatu aldian behin**.
+
+---
+
 ## Segurtasuna
 
 Aplikazioak **ez du portu bakar bat ere irekitzen sarera**: interfazea `127.0.0.1`-en
 bakarrik entzuten du eta ez du inoiz konexiorik hasten. Ez dago suebakia konfiguratu beharrik.
+
+Mobilean ere ez dago zerbitzaririk: dena nabigatzailearen barruan gertatzen da. Aldea
+zera da, kodea (aplikazioa bera) hosting estatiko batetik deskargatzen dela behin. **Zure
+partidak ez dira inoiz hara bidaltzen**: telefonoaren biltegian geratzen dira, eta ateratzen
+den gauza bakarra zuk eskuz esportatzen duzun `.rootsync` fitxategia da.
 
 | Arriskua | Babesa |
 |---|---|
@@ -194,18 +246,31 @@ bidea aukeratzean.
 
 | Fitxategia | Zertarako |
 |---|---|
-| `app.py` | Interfaze lokala eta APIa (127.0.0.1) |
+| `app.py` | Mahaigaineko HTTP geruza (127.0.0.1): eskaerak `web_api`-ra bideratzen ditu |
+| `web_api.py` | APIaren logika, HTTPtik aske. Mahaigainak eta mobilak berdin erabiltzen dute |
+| `mobil_zubia.py` | Nabigatzailearen (Pyodide) eta `web_api`-ren arteko zubia |
 | `gertaerak.py` | Gertaera-erregistroa: balidazioa, bateratzea, proiekzioak |
 | `sinkro.py` | `.rootsync` fitxategia esportatu eta inportatu |
-| `babeskopiak.py` | Kopiak, atxikitzea, leheneratzea |
+| `babeskopiak.py` | Kopiak, atxikitzea, leheneratzea (mahaigainean bakarrik) |
 | `estatistikak.py` | Kontsultak |
 | `db.py`, `eskema.sql` | Datu-basea eta hazi-datuak (fakzioak, mapak, mertzenarioak, lekuak) |
-| `static/index.html` | Interfaze osoa (dependentziarik gabe) |
+| `static/index.html` | Interfaze osoa (dependentziarik gabe), bi ingurunetarako |
+| `static/pyodide-abioa.js` | Mobilean Python nabigatzailean abiarazten du |
+| `static/sw.js`, `static/manifest.json` | Offline erabiltzeko eta instalatzeko |
 
 Testak:
 
 ```bash
 python3 -m pytest tests/ -q
+```
+
+Mobileko testek benetako nabigatzaile bat irekitzen dute (Pyodide kargatuta) eta
+mobiletik mahaigainerako trukea probatzen dute. Astiroak dira eta Playwright behar
+dute; instalatuta ez badago, saltatu egiten dira:
+
+```bash
+pip install playwright && playwright install chromium
+python3 -m pytest tests/test_mobila_nabigatzailean.py -q
 ```
 
 ---

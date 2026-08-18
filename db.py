@@ -9,6 +9,13 @@ BASE_DIR = Path(__file__).parent
 DB_FITX = Path(os.environ.get("DB_FILE", BASE_DIR / "root.db"))
 ESKEMA_FITX = BASE_DIR / "eskema.sql"
 
+# Zerrenda itxia: balioa SQL kontsulta batean txertatzen da, eta ez da inoiz
+# erabiltzailearen eskaeratik etortzen (ingurune-aldagaia da).
+_JOURNAL_ONARTUAK = {"WAL", "DELETE", "TRUNCATE", "PERSIST", "MEMORY", "OFF"}
+JOURNAL_MODUA = os.environ.get("ROOT_JOURNAL", "WAL").upper()
+if JOURNAL_MODUA not in _JOURNAL_ONARTUAK:
+    JOURNAL_MODUA = "WAL"
+
 # ─── Hazi-datuak ────────────────────────────────────────────────────────────
 # Kode hauek egonkorrak dira: gailu guztiek berdinak dituzte, beraz ez dute
 # sinkronizatu beharrik. Hedapen berri bat atera ahala, aplikaziotik gehi
@@ -126,7 +133,11 @@ def konexioa(bidea: Path | str | None = None) -> sqlite3.Connection:
     konn.execute("PRAGMA foreign_keys = ON")
     # WAL: irakurketek ez dute idazketarik blokeatzen (sinkronizazioa hari
     # bereizian dabil), eta hutsegite baten aurrean sendoagoa da.
-    konn.execute("PRAGMA journal_mode = WAL")
+    #
+    # Nabigatzailean (Pyodide) ez dago WALik: Emscripten-en fitxategi-sistemak
+    # ez du WALek behar duen memoria partekatua. Han ROOT_JOURNAL=DELETE
+    # ezartzen da. Mahaigainean beti WAL.
+    konn.execute(f"PRAGMA journal_mode = {JOURNAL_MODUA}")
     konn.execute("PRAGMA synchronous = NORMAL")
     return konn
 
