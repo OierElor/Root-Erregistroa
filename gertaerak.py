@@ -521,25 +521,15 @@ def gehitu(konn: sqlite3.Connection, kanpokoak: list) -> dict:
     return {"berriak": berriak, "baztertuak": baztertuak, "entitateak": len(ukituak)}
 
 
-# ─── Sinkronizaziorako laguntzaileak ────────────────────────────────────────
+# ─── Trukerako laguntzaileak ────────────────────────────────────────────────
 
 
-def id_guztiak(konn: sqlite3.Connection) -> list:
-    return [l[0] for l in konn.execute("SELECT gertaera_id FROM gertaerak")]
-
-
-def esportatu(konn: sqlite3.Connection, kanpo_idak=None) -> list:
-    """Gertaerak esportatu. `kanpo_idak` emanez gero, horiek EZ dira bidaltzen.
-
-    Horrela beste gailuak dagoeneko dituenak ez dira sarean barrena bidaltzen.
-    """
-    kanpo_idak = set(kanpo_idak or ())
+def esportatu(konn: sqlite3.Connection) -> list:
+    """Gertaera guztiak, ordena deterministikoan."""
     emaitza = []
     for lerroa in konn.execute(
         "SELECT * FROM gertaerak ORDER BY lamport, gailu_id, gertaera_id"
     ):
-        if lerroa["gertaera_id"] in kanpo_idak:
-            continue
         emaitza.append(
             {
                 "gertaera_id": lerroa["gertaera_id"],

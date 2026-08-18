@@ -2,8 +2,9 @@
 """Root Erregistroa — interfaze lokala eta APIa.
 
 Zerbitzari hau **127.0.0.1-en bakarrik** entzuten du: interfazea zure
-ordenagailurako da, ez sarerako. Sinkronizazioa `sarea.py`-k kudeatzen du beste
-portu batean, eta hark fardel zifratuak baino ez ditu onartzen.
+ordenagailurako da, ez sarerako. Beste ordenagailuekin erregistroa trukatzeko
+fitxategiak erabiltzen dira (`sinkro.py`), ez konexioak: aplikazioak ez du
+sarera portu bakar bat ere irekitzen.
 
 Erabilera::
 
@@ -24,15 +25,14 @@ import db
 import estatistikak
 import gertaerak
 import konfig
-import kripto
-import sarea
 import sinkro
 
 PORTUA = int(os.environ.get("PORT", "3000"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__, static_folder=None)
-app.config["MAX_CONTENT_LENGTH"] = kripto.GEHIENEZ_FARDELA
+# Inportatzen den fitxategiaren gehienezko tamaina.
+app.config["MAX_CONTENT_LENGTH"] = 64 * 1024 * 1024
 
 # Saio-tokena: abio bakoitzean berria. Nabigatzailean irekita duzun beste
 # webgune batek ezin dizu APIra eskaerarik egin tokenik gabe.
@@ -109,8 +109,7 @@ def akatsak_harrapatu(funtzioa):
     def bilgarria(*a, **kw):
         try:
             return funtzioa(*a, **kw)
-        except (gertaerak.GertaeraErrorea, sinkro.SinkroErrorea,
-                kripto.KriptoErrorea, ValueError) as e:
+        except (gertaerak.GertaeraErrorea, sinkro.SinkroErrorea, ValueError) as e:
             return jsonify(errorea=str(e)), 400
         except sqlite3.Error:
             return jsonify(errorea="Datu-basearen errorea"), 500
@@ -351,44 +350,23 @@ def estatistikak_ikusi():
     )
 
 
-# ─── Sinkronizazioa ─────────────────────────────────────────────────────────
+# ─── Fitxategi bidezko trukea ───────────────────────────────────────────────
 
 
 @app.route("/api/sinkro/egoera")
 @akatsak_harrapatu
 def sinkro_egoera():
-    return jsonify(
-        **sinkro.egoera(konn()),
-        kideak=sarea.kideak(),
-        azken_sinkro=sarea.azken_sinkro(),
-        sync_portua=sarea.SYNC_PORTUA,
-    )
-
-
-@app.route("/api/sinkro/taldea", methods=["POST"])
-@akatsak_harrapatu
-def sinkro_taldea():
-    datuak = json_gorputza()
-    emaitza = sinkro.taldea_konfiguratu(
-        datuak.get("izena", ""), datuak.get("pasaesaldia", "")
-    )
-    return jsonify(ok=True, **emaitza, oharra="Berrabiarazi LAN sinkronizazioa martxan jartzeko.")
-
-
-@app.route("/api/sinkro/orain", methods=["POST"])
-@akatsak_harrapatu
-def sinkro_orain():
-    return jsonify(sarea.orain_sinkronizatu())
+    return jsonify(**sinkro.egoera(konn()))
 
 
 @app.route("/api/sinkro/esportatu")
 @akatsak_harrapatu
 def sinkro_esportatu():
-    fardela = sinkro.fitxategira_esportatu(konn())
+    fitxategia = sinkro.fitxategira_esportatu(konn())
     izena = f"root-erregistroa-{time.strftime('%Y%m%d-%H%M%S')}.rootsync"
     return Response(
-        fardela,
-        mimetype="application/octet-stream",
+        fitxategia,
+        mimetype="application/json",
         headers={"Content-Disposition": f'attachment; filename="{izena}"'},
     )
 
@@ -400,7 +378,7 @@ def sinkro_inportatu():
     if not gordina:
         raise ValueError("Fitxategia hutsik dago")
     k = konn()
-    # Babeskopia fardela ona dela egiaztatu ondoren, datuak ukitu aurretik.
+    # Babeskopia fitxategia ona dela egiaztatu ondoren, datuak ukitu aurretik.
     return jsonify(
         babeskopia=True,
         **sinkro.fitxategitik_inportatu(k, gordina, lambda: babeskopiak.kopia_egin(k, "inportazio")),
@@ -471,14 +449,12 @@ def abiarazi():
     finally:
         hasierako_konn.close()
 
-    zerbitzua = sarea.Zerbitzua()
-    zerbitzua.abiarazi()
-
     print(f"\n  Root Erregistroa → http://127.0.0.1:{PORTUA}")
     print(f"  Datu-basea: {db.DB_FITX}")
     print(f"  Gailua: {konfig.gailu_izena()} ({konfig.gailu_id()[:8]})\n")
 
-    # 127.0.0.1: sarera EZ da inoiz irekitzen; hori sarea.py-ren lana da.
+    # 127.0.0.1: aplikazioak ez du sarera ezer irekitzen. Beste ordenagailuekin
+    # trukea fitxategi bidez egiten da, konexiorik gabe.
     app.run(host="127.0.0.1", port=PORTUA, threaded=True)
 
 

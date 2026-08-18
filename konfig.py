@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gailuaren identitatea eta taldearen konfigurazioa.
+"""Gailuaren identitatea eta ezarpenak.
 
 Datu hauek EZ dira datu-basean gordetzen, nahita: datu-basea beste ordenagailu
 batera kopiatzen bada (babeskopia bat leheneratuz, adibidez), gailu berri horrek
@@ -19,17 +19,10 @@ KONFIG_DIR = Path(
     os.environ.get("KONFIG_DIR", Path.home() / ".config" / "root-erregistroa")
 )
 
-# Sinkronizazio-portua hemen dago (eta ez `sarea.py`-n) `sinkro`-k ere behar
-# duelako: bidaltzen dituen fardeletan sartzen du, hartzaileak jakin dezan gu
-# non aurkitu. Bi moduluek `konfig` inportatzen dute, eta horrek zirkulartasuna
-# saihesten du.
-SYNC_PORTUA = int(os.environ.get("SYNC_PORT", "47778"))
 GAILU_FITX = KONFIG_DIR / "gailua.json"
-TALDE_FITX = KONFIG_DIR / "talde.json"
 EZARPEN_FITX = KONFIG_DIR / "ezarpenak.json"
 
 EZARPEN_LEHENETSIAK = {
-    "sync_auto": True,
     "babeskopia_gehienez": 20,
     "babeskopia_abioan": True,
 }
@@ -37,7 +30,6 @@ EZARPEN_LEHENETSIAK = {
 
 def _karpeta_ziurtatu() -> None:
     KONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    # Norberarentzat soilik: taldearen gakoa hemen bizi da.
     os.chmod(KONFIG_DIR, stat.S_IRWXU)
 
 
@@ -97,33 +89,6 @@ def gailua_izendatu(izena: str) -> None:
     datuak = gailua()
     datuak["izena"] = izena.strip()[:60]
     _idatzi_pribatua(GAILU_FITX, datuak)
-
-
-# ─── Taldea ─────────────────────────────────────────────────────────────────
-#
-# {"gatza": b64, "gakoa": b64, "talde_marka": hex, "izena": str}
-#
-# Pasaesaldia bera EZ da inoiz gordetzen; eratorritako gakoa bakarrik, 0600
-# baimenekin. Zure erabiltzaile-kontua duen norbaitek irakur dezake — hori
-# saihesteko modu bakarra abio bakoitzean pasaesaldia eskatzea litzateke, eta
-# erabilerraztasunaren truke ez da merezi mahai-joko baten erregistro batentzat.
-
-
-def taldea() -> dict | None:
-    return _irakurri(TALDE_FITX)
-
-
-def taldea_gorde(datuak: dict) -> None:
-    _idatzi_pribatua(TALDE_FITX, datuak)
-
-
-def taldea_ezabatu() -> None:
-    TALDE_FITX.unlink(missing_ok=True)
-
-
-def talderik_badago() -> bool:
-    d = taldea()
-    return bool(d and d.get("gakoa"))
 
 
 # ─── Ezarpenak ──────────────────────────────────────────────────────────────

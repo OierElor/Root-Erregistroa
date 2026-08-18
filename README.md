@@ -1,7 +1,8 @@
 # 🌲 Root Erregistroa
 
-Root mahai-jokoaren partiden erregistroa, **zerbitzaririk gabe** sinkronizatzen dena
-taldeko ordenagailu guztien artean, eta babeskopia automatikoekin.
+Root mahai-jokoaren partiden erregistroa: zure ordenagailuan bizi da, fitxategi baten
+bidez partekatzen da lagunekin, eta babeskopia automatikoak ditu. Ez du sarerik, ez
+zerbitzaririk, ez konturik behar.
 
 * Partidak sartu, **editatu** eta ezabatu: data, mapa, karta sorta, jokalari bakoitzaren
   fakzioa, puntuak eta garaipen mota, Vagabond-en **pertsonaia** (Thief, Ranger…),
@@ -9,18 +10,18 @@ taldeko ordenagailu guztien artean, eta babeskopia automatikoekin.
 * Jokoaren izen guztiak **ingelesez, kartetan bezala** (interfazea euskaraz).
 * Estatistikak: jokalarien sailkapena, fakzioen irabazte-tasak, jokalari bakoitzak zein
   fakziorekin jokatzen duen ondoen, eta mertzenario/leku erabilienak.
-* **Sinkronizazioa zerbitzaririk gabe**: sare lokalean automatikoki, edo fitxategi zifratu
-  baten bidez (USB, posta, hodeia) urrutitik.
+* **Partekatzea fitxategi bidez**: esportatu, bidali (Telegram, posta, USB), besteak
+  inportatu. Bi erregistro batzeak ez du inoiz daturik galtzen.
 * **Babeskopiak**: automatikoak, aldaketa arriskutsuen aurretik, eta eskuz.
 
 ---
 
 ## Instalazioa
 
-Dependentzia guztiak Debian 13-n instalatuta datoz jada. Bestela:
+Dependentzia bakarra Flask da, Debian 13-n instalatuta datorrena. Bestela:
 
 ```bash
-sudo apt install python3-flask python3-cryptography
+sudo apt install python3-flask
 ```
 
 Abiarazi:
@@ -39,35 +40,36 @@ Ingurune-aldagaiak (aukerakoak):
 | `PORT` | Interfazearen portua (lehenetsia: 3000) |
 | `DB_FILE` | Beste datu-base bat erabili (probetarako) |
 | `KONFIG_DIR` | Konfigurazioaren karpeta (lehenetsia: `~/.config/root-erregistroa`) |
-| `SYNC_PORT` | Sinkronizazioaren portua (lehenetsia: 47778) |
-| `GAILU_IZENA` | Gailu honen izena kideen zerrendan |
+| `GAILU_IZENA` | Gailu honen izena (esportatutako fitxategietan agertzen dena) |
 
 ---
 
-## Taldea sortzea eta besteak elkartzea
+## Erregistroa lagunekin partekatzea
 
-1. **Sinkronizazioa** atalean, idatzi **taldearen izena** eta **pasaesaldi bat**.
-2. Lagun bakoitzak gauza bera egiten du bere ordenagailuan: **izen eta pasaesaldi berak**.
-3. Berrabiarazi aplikazioa (LAN zerbitzua abiarazteko).
+**Sinkronizazioa** atalean bi botoi daude, eta hori da dena:
 
-Hori da dena. Ez dago konturik, ez zerbitzaririk, ez erregistratzerik: izen eta pasaesaldi
-beretik gako berbera eratortzen da ordenagailu guztietan, eta gako hori dutenek bakarrik
-ulertzen dute elkar.
+1. **Esportatu fitxategia** — `.rootsync` fitxategi bat sortzen du zure partida guztiekin.
+2. Bidali nahi duzun bidetik: Telegram, posta, USB, hodeia… aplikazioak ez du axola.
+3. Lagunak **Inportatu fitxategia** sakatzen du eta bere erregistroarekin batzen da.
 
-> **Pasaesaldia ahoz eman lagunei** (edo paperean). Ez bidali erregistroa sinkronizatzeko
-> erabiliko duzun bide beretik.
+Alderantziz berdin: haien fitxategia inportatuz gero, haien partidak zureekin batzen dira.
+Ez dago konturik, zerbitzaririk, pasaesaldirik ez portu-rik: aplikazioak **ez du inoiz
+konexiorik irekitzen**.
 
-### Nola sinkronizatzen den
+> Sinkronizazioa atalean **erregistroaren hatz-marka** agertzen da. Bi ordenagailutan
+> berdina bada, biek gauza bera dute.
 
-* **Sare berean bazaudete** (adib. partida bat jokatzen ari zarete): aplikazioek elkar
-  aurkitzen dute automatikoki eta 20 segundoro sinkronizatzen dira. `Orain sinkronizatu`
-  botoiak berehala egiten du.
-* **Urrun bazaude**: `Esportatu .rootsync` botoiak fitxategi zifratu bat sortzen du.
-  Bidali nahi duzun bidetik (USB, Telegram, posta, Nextcloud) eta besteak `Inportatu`
-  botoiarekin sartzen du. Fitxategiak ez du ezer ezabatzen: gehitu baino ez du egiten.
+### Zergatik ez den ezer galtzen
 
-Bi bideek gauza bera erabiltzen dute barnean, eta biak dira **norabide bikoak**: partidak
-zeinek sartu dituen axola gabe, denek dena amaitzen dute edukitzen.
+Inportatzeak ez du **inoiz** ezer ezabatzen: gertaerak gehitu baino ez du egiten. Horri
+esker:
+
+* Fitxategi bera bi (edo hamar) aldiz inportatu dezakezu: ez du ezer bikoizten.
+* Nork zer sartu duen axola ez zaio: fitxategiak batera eta bestera pasata, denek dena
+  amaitzen dute edukitzen.
+* Bi lagunek partida bera aldatuta ere, biek emaitza **berbera** ikusiko dute bateratu
+  ondoren (azkena irabazten du, eta denek berdin kalkulatzen dute zein den azkena).
+* Zure esportazioa zeuk inportatu dezakezu arazorik gabe: babeskopia eramangarri gisa balio du.
 
 ### Jokoaren izenak eta katalogoak
 
@@ -116,19 +118,17 @@ erregistroan gordeta geratzen dira, ez dira ezabatzen.
 > Partida bat ustekabean ezabatu baduzu, oraindik ez dago desegiteko botoirik: erabili
 > `Babeskopiak` ataleko leheneratzea, edo sartu berriro.
 
-### Zergatik ez den ezer galtzen
+### Nola dagoen eginda barrutik
 
 Datuak ez dira "azken bertsioak irabazi" moduan gainidazten. Aldaketa bakoitza **gertaera
-bat** da (partida bat gehitu, aldatu, ezabatu), identifikatzaile bakar batekin. Bi
-ordenagailu bateratzean, gertaeren batuketa egiten da:
-
-* Ordenak ez du axola: gertaerak edozein ordenatan iritsita ere emaitza berbera da.
-* Errepikatzeak ez du kalterik: fitxategi bera hamar aldiz inportatzeak ez du ezer bikoizten.
-* Bi lagunek partida bera aldatzen badute konexiorik gabe, biek emaitza **berbera** ikusiko
-  dute bateratu ondoren (ez bata bat eta bestea beste bat).
+bat** da (partida bat gehitu, aldatu, ezabatu), identifikatzaile bakar batekin, eta bi
+erregistro batzea gertaera horien batuketa hutsa da. Hortik datoz goiko bermeak.
 
 Erregistroa osorik gordetzen denez, `Erregistrotik berreraiki` botoiak taula guztiak
 zerotik sortzen ditu zerbait arraro ikusiz gero.
+
+Esportatutako fitxategia **JSON arrunta** da: editore batekin ireki eta barrukoa ikus
+dezakezu.
 
 ---
 
@@ -147,8 +147,9 @@ zerotik sortzen ditu zerbait arraro ikusiz gero.
   koherentea da (`cp` egiteak fitxategi hondatua utz lezake).
 * Fitxategi bakarrak dira: USB batera arrastatzea nahikoa da.
 * Zaharrenak automatikoki garbitzen dira, baina **egun bakoitzeko bat beti gordetzen da**.
-* **Ordenagailutik kanpo gordetzeko**, erabili `Esportatu .rootsync`: zifratuta dagoenez,
-  hodeian edo posta batean uztea arriskurik gabea da.
+* **Ordenagailutik kanpo gordetzeko**, erabili `Esportatu fitxategia`: `.rootsync` fitxategi
+  bakar batean doa dena, eta berriro inportatuz berreskuratzen da. Testu laua da, ordea:
+  ikusi behar ez lukeen inoren eskuetan ez uzteko kontuan izan.
 
 Leheneratzeak uneko egoeraren kopia bat egiten du beti aurretik, beraz leheneratze oker
 batek ere ez du ezer galtzen.
@@ -157,42 +158,27 @@ batek ere ez du ezer galtzen.
 
 ## Segurtasuna
 
-Kontuan hartutakoa:
+Aplikazioak **ez du portu bakar bat ere irekitzen sarera**: interfazea `127.0.0.1`-en
+bakarrik entzuten du eta ez du inoiz konexiorik hasten. Ez dago suebakia konfiguratu beharrik.
 
 | Arriskua | Babesa |
 |---|---|
-| Wifiko besteek zure partidak irakurtzea | ChaCha20-Poly1305 zifratzea; gakorik gabe ezer ez |
-| Datuak bidean aldatzea | AEAD osotasun-etiketa: byte bat aldatuta, fardela baztertu egiten da |
-| Fardel zahar bat berriro bidaltzea | Nonce bakarra + ±10 minutuko leihoa |
 | Beste webgune batek zure aplikazio lokalari eskaerak egitea | Saio-tokena + `Origin`/`Host` egiaztapena |
-| Aplikazioa sareari zabalik egotea | Interfazea **127.0.0.1**-en soilik; kanpora `POST /sync` bakarrik |
-| Datu okerrak sinkronizazioan | Gertaera bakoitza balidatu egiten da datu-basera iritsi aurretik |
+| Zure aplikaziora kanpotik iristea | Interfazea **127.0.0.1**-en soilik; kanpora zabalik ezer ez |
+| Fitxategi baten datu okerrek datu-basea hondatzea | Gertaera bakoitza banaka balidatzen da; baliogabeak baztertu eta besteak onartu |
+| Inportatzeak zerbait apurtzea | Beti babeskopia bat aurretik; inportatzeak ez du ezer ezabatzen |
+| SQL injekzioa | Kontsulta parametrizatuak salbuespenik gabe |
 | Fitxategi-izen maltzurrak babeskopietan | Izen-eredu zorrotza; karpetatik kanpoko bideak baztertuta |
-| Konpresio-bonbak | Deskonpresio mugatua |
-| Pasaesaldi ahulak indarrez asmatzea | scrypt (2¹⁷ · 8 · 1, ~134 MB saiakera bakoitzeko) |
 
-**Zer EZ du babesten** (aukeratutako eredua "pasaesaldia bakarrik" da): taldeko pasaesaldia
-duen edonork partidak sor edo alda ditzake beste edonoren izenean, eta ezin da frogatu nork
-egin duen. Talde txiki eta fidagarri batentzat nahikoa da. Bermea handiagoa nahi izanez gero,
-gertaera bakoitzari gailuaren sinadura (Ed25519) gehitzea da hurrengo urratsa: formatuak
-`sinadura` eremua **erreserbatuta** du hasieratik, beraz gehitzean ez da ezer hautsiko eta
-datu zaharrek balio izaten jarraituko dute.
+**Zer EZ du babesten.** `.rootsync` fitxategiak testu laua dira, zifratu gabe:
 
-Taldearen gakoa `~/.config/root-erregistroa/talde.json`-en gordetzen da, `0600` baimenekin.
-Pasaesaldia bera ez da inoiz gordetzen. Zure kontuan sartzeko modua duen norbaitek gakoa
-irakur dezake — hori ekiditeko modu bakarra abio bakoitzean pasaesaldia eskatzea litzateke,
-eta mahai-joko baten erregistro batentzat ez du merezi.
+* Fitxategia eskuratzen duen edonork irakur dezake erregistroa (izenak, partidak, puntuak).
+* Bidean edonork alda dezake — adibidez bere puntuak igo — inork jakin gabe. Inportatzean
+  balio zentzugabeak baztertzen dira (999 puntu baino gehiago, izen luzeegiak…), baina
+  sinesgarria den aldaketa bat ez da detektatzen.
 
-### Suebakia
-
-LAN sinkronizazioak bi portu behar ditu sare lokalean:
-
-```bash
-sudo ufw allow from 192.168.0.0/16 to any port 47777 proto udp   # aurkikuntza
-sudo ufw allow from 192.168.0.0/16 to any port 47778 proto tcp   # trukea
-```
-
-Interfazearen portua (3000) **ez da inoiz** kanpora zabaldu behar.
+Mahai-joko baten erregistroarentzat aukera egokia da; kontuan izan fitxategia bidaltzeko
+bidea aukeratzean.
 
 ---
 
@@ -202,9 +188,7 @@ Interfazearen portua (3000) **ez da inoiz** kanpora zabaldu behar.
 |---|---|
 | `app.py` | Interfaze lokala eta APIa (127.0.0.1) |
 | `gertaerak.py` | Gertaera-erregistroa: balidazioa, bateratzea, proiekzioak |
-| `kripto.py` | `.rootsync` fardela: scrypt, ChaCha20-Poly1305, mugak |
-| `sinkro.py` | Taldea eta sinkronizazio-protokoloa |
-| `sarea.py` | LAN aurkikuntza eta trukea |
+| `sinkro.py` | `.rootsync` fitxategia esportatu eta inportatu |
 | `babeskopiak.py` | Kopiak, atxikitzea, leheneratzea |
 | `estatistikak.py` | Kontsultak |
 | `db.py`, `eskema.sql` | Datu-basea eta hazi-datuak (fakzioak, mapak, mertzenarioak, lekuak) |
@@ -224,14 +208,16 @@ python3 -m pytest tests/ -q
   beraz "Oier" bi lekutan sartzeak jokalari bakarra sortzen du bateratzean. Hala ere, jokalari
   bati izena aldatu eta aldaketa iritsi baino lehen beste ordenagailu batean izen zaharra
   idazten bada, bikoiztu daiteke; konpontzeko, editatu partida eta hautatu zerrendako jokalaria.
-* **Hedapen berri bat** atera bada, fakzio berriak gehi daitezke; sinkronizatu egiten dira
-  beste guztiekin.
+* **Hedapen berri bat** atera bada, fakzio berriak gehi daitezke; fitxategian bidaiatzen dute
+  besteekin batera.
+* **Ohitura ona**: partida gau baten ondoren, batek esportatu eta taldeko txatera bidali.
+  Besteek inportatu eta denek berdina dute. Ez du axola nork esportatzen duen.
 * **Bi ordenagailu proban**, makina berean:
 
   ```bash
-  DB_FILE=/tmp/a.db KONFIG_DIR=/tmp/konfA PORT=3000 SYNC_PORT=47778 python3 app.py
-  DB_FILE=/tmp/b.db KONFIG_DIR=/tmp/konfB PORT=3001 SYNC_PORT=47779 python3 app.py
+  DB_FILE=/tmp/a.db KONFIG_DIR=/tmp/konfA PORT=3000 python3 app.py
+  DB_FILE=/tmp/b.db KONFIG_DIR=/tmp/konfB PORT=3001 python3 app.py
   ```
 
-* **Sinkronizatuta zaudeten egiaztatzeko**: Sinkronizazioa atalean agertzen den
+* **Denek berdina duzuen egiaztatzeko**: Sinkronizazioa atalean agertzen den
   *erregistroaren hatz-marka* berdina izan behar da ordenagailu guztietan.

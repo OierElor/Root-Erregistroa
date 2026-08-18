@@ -206,11 +206,19 @@ ZUTABE_BERRIAK = [
 ]
 
 
+# Jada erabiltzen ez diren taulak. Sinkronizazioa fitxategi bidezkoa denez, ez
+# dago errepikapenen aurkako babesik behar (fitxategi bat bi aldiz inportatzea
+# guztiz zilegi da, eta gertaeren bikoiztuak berez baztertzen dira).
+TAULA_ZAHARRAK = ["ikusitako_nonceak"]
+
+
 def _zutabeak_ziurtatu(konn: sqlite3.Connection) -> None:
     for taula, zutabea, definizioa in ZUTABE_BERRIAK:
         badaudenak = {l[1] for l in konn.execute(f"PRAGMA table_info({taula})")}
         if zutabea not in badaudenak:
             konn.execute(f"ALTER TABLE {taula} ADD COLUMN {zutabea} {definizioa}")
+    for taula in TAULA_ZAHARRAK:
+        konn.execute(f"DROP TABLE IF EXISTS {taula}")
 
 
 def meta_irakurri(konn: sqlite3.Connection, gakoa: str, lehenetsia: str = "") -> str:

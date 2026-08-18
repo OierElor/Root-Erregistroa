@@ -143,17 +143,12 @@ CREATE TABLE IF NOT EXISTS karta_sortak (
     izena TEXT NOT NULL
 );
 
--- ─── Sinkronizazioa ─────────────────────────────────────────────────────────
+-- ─── Trukea ─────────────────────────────────────────────────────────────────
 
+-- Zein ordenagailutatik datozen datuak. Fitxategi bat inportatzean betetzen da.
 CREATE TABLE IF NOT EXISTS gailuak (
     gailu_id      TEXT PRIMARY KEY,
     izena         TEXT,
     azken_ikusia  INTEGER,
     azken_lamport INTEGER NOT NULL DEFAULT 0
-);
-
--- Errepikapenen (replay) aurkako babesa: fardel baten nonce-a behin bakarrik.
-CREATE TABLE IF NOT EXISTS ikusitako_nonceak (
-    nonce TEXT PRIMARY KEY,
-    noiz  INTEGER NOT NULL
 );

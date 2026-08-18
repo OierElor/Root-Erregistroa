@@ -1,23 +1,19 @@
-"""Bi gailuren arteko sinkronizazio osoa, sarerik gabe simulatuta.
+"""Fitxategi bidezko trukearen testak.
 
-`gailua_bezala` erabiliz prozesu berean bi gailu ordezkatzen dira: bakoitzak
-bere datu-basea du, baina talde bera (gako bera).
+Bi ordenagailu simulatzen dira prozesu berean: bakoitzak bere datu-basea eta
+bere gailu-identitatea. "Sinkronizatzea" fitxategi bat batetik bestera pasatzea
+da, USB batean edo Telegram bidez egingo litzatekeen bezala.
 """
 
 import contextlib
-import time
+import json
 import uuid
 
 import pytest
 
 import db
 import gertaerak
-import konfig
-import kripto
 import sinkro
-
-TALDEA = "Aramaixoko basoa"
-PASAESALDIA = "sagardoa-2026"
 
 
 @contextlib.contextmanager
@@ -28,22 +24,15 @@ def gailua_bezala(monkeypatch, gailu_id):
         yield
 
 
-@pytest.fixture
-def taldea():
-    sinkro.taldea_konfiguratu(TALDEA, PASAESALDIA)
-    yield
-    konfig.taldea_ezabatu()
-
-
 def datu_basea(tmp_path, izena):
     bidea = tmp_path / f"{izena}.db"
     db.hasieratu(bidea)
     return db.konexioa(bidea)
 
 
-def partida(jokalaria, puntuak=30):
+def partida(jokalaria, puntuak=30, partida_id=None, **gehigarriak):
     return {
-        "id": uuid.uuid4().hex,
+        "id": partida_id or uuid.uuid4().hex,
         "data": "2026-03-14",
         "mapa_kodea": "negua",
         "karta_sorta": "estandarra",
@@ -52,332 +41,258 @@ def partida(jokalaria, puntuak=30):
             {"jokalari_id": jokalaria, "fakzio_kodea": "eyrie", "puntuak": puntuak,
              "irabazlea": True, "garaipen_mota": "puntuak"}
         ],
+        **gehigarriak,
     }
 
 
-def truke_osoa(monkeypatch, ka, kb):
-    """A eta B-ren arteko sinkronizazio osoa (bi norabideak)."""
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        eskaera = sinkro.eskaera_sortu(ka)
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        erantzuna = sinkro.eskaera_erantzun(kb, eskaera)
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        emaitza = sinkro.erantzuna_prozesatu(ka, erantzuna)
-    if emaitza["bultzada"]:
-        with gailua_bezala(monkeypatch, "gailua-b"):
-            sinkro.eskaera_erantzun(kb, emaitza["bultzada"])
-    return emaitza
+def pasatu(monkeypatch, iturria, helburua, nork="gailua-a", nori="gailua-b"):
+    """Fitxategi bat esportatu batean eta inportatu bestean."""
+    with gailua_bezala(monkeypatch, nork):
+        fitxategia = sinkro.fitxategira_esportatu(iturria)
+    with gailua_bezala(monkeypatch, nori):
+        return fitxategia, sinkro.fitxategitik_inportatu(helburua, fitxategia)
 
 
-# ─── Sinkronizazioa ─────────────────────────────────────────────────────────
+# ─── Oinarrizko trukea ──────────────────────────────────────────────────────
 
 
-def test_bi_norabideko_sinkronizazioa(tmp_path, monkeypatch, taldea):
+def test_esportatu_eta_inportatu(tmp_path, monkeypatch):
     ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
-
     with gailua_bezala(monkeypatch, "gailua-a"):
         gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
-        gertaerak.gertaera_berria(ka, "partida_gorde", partida("j1", 31))
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        gertaerak.gertaera_berria(kb, "jokalaria_gorde", {"id": "j2", "izena": "Ander"})
-        gertaerak.gertaera_berria(kb, "partida_gorde", partida("j2", 27))
+        gertaerak.gertaera_berria(ka, "partida_gorde", partida("j1"))
 
-    emaitza = truke_osoa(monkeypatch, ka, kb)
+    _, emaitza = pasatu(monkeypatch, ka, kb)
 
-    assert emaitza["jasoak"] == 2
+    assert emaitza["berriak"] == 2
+    assert emaitza["iturria"] == "gailua-a"
     assert gertaerak.egoeraren_hatz_marka(ka) == gertaerak.egoeraren_hatz_marka(kb)
-    for k in (ka, kb):
-        assert k.execute("SELECT COUNT(*) FROM partidak").fetchone()[0] == 2
-        assert k.execute("SELECT COUNT(*) FROM jokalariak").fetchone()[0] == 2
 
 
-def test_sinkronizazio_hutsa_idempotentea_da(tmp_path, monkeypatch, taldea):
+def test_fitxategia_json_irakurgarria_da(tmp_path, monkeypatch):
+    ka = datu_basea(tmp_path, "a")
+    with gailua_bezala(monkeypatch, "gailua-a"):
+        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
+        fitxategia = sinkro.fitxategira_esportatu(ka)
+
+    edukia = json.loads(fitxategia)
+    assert edukia["formatua"] == "root-erregistroa"
+    assert edukia["bertsioa"] == sinkro.BERTSIOA
+    assert len(edukia["gertaerak"]) == 1
+    assert "Oier" in fitxategia.decode("utf-8")   # testu laua da
+
+
+def test_bi_aldiz_inportatzeak_ez_du_bikoizten(tmp_path, monkeypatch):
     ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
     with gailua_bezala(monkeypatch, "gailua-a"):
         gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
 
-    truke_osoa(monkeypatch, ka, kb)
-    bigarrena = truke_osoa(monkeypatch, ka, kb)
+    fitxategia, lehena = pasatu(monkeypatch, ka, kb)
+    with gailua_bezala(monkeypatch, "gailua-b"):
+        bigarrena = sinkro.fitxategitik_inportatu(kb, fitxategia)
 
-    assert bigarrena["jasoak"] == 0
-    assert bigarrena["bidaltzekoak"] == 0
+    assert (lehena["berriak"], bigarrena["berriak"]) == (1, 0)
     assert kb.execute("SELECT COUNT(*) FROM gertaerak").fetchone()[0] == 1
 
 
-def test_offline_aldaketak_bateratzen_dira(tmp_path, monkeypatch, taldea):
-    """Biek partida bera aldatzen dute konexiorik gabe: emaitza bat eta bakarra."""
+def test_norberak_esportatutakoa_berriro_inportatu_daiteke(tmp_path, monkeypatch):
+    """Babeskopia eramangarri gisa erabiltzeko funtsezkoa da."""
+    ka = datu_basea(tmp_path, "a")
+    with gailua_bezala(monkeypatch, "gailua-a"):
+        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
+        fitxategia = sinkro.fitxategira_esportatu(ka)
+        emaitza = sinkro.fitxategitik_inportatu(ka, fitxategia)
+
+    assert emaitza["berriak"] == 0
+    assert ka.execute("SELECT COUNT(*) FROM jokalariak").fetchone()[0] == 1
+
+
+def test_bi_norabideak_eta_offline_aldaketak(tmp_path, monkeypatch):
+    """Biek partida bana sartzen dute konexiorik gabe, gero fitxategiak trukatu."""
     ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
-    partida_id = uuid.uuid4().hex
-
     with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "partida_gorde", {**partida("j1", 30), "id": partida_id})
-    truke_osoa(monkeypatch, ka, kb)
-
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "partida_gorde", {**partida("j1", 31), "id": partida_id})
+        gertaerak.gertaera_berria(ka, "partida_gorde", partida("j1", 31))
     with gailua_bezala(monkeypatch, "gailua-b"):
-        gertaerak.gertaera_berria(kb, "partida_gorde", {**partida("j1", 25), "id": partida_id})
+        gertaerak.gertaera_berria(kb, "partida_gorde", partida("j2", 27))
 
-    truke_osoa(monkeypatch, ka, kb)
-    truke_osoa(monkeypatch, ka, kb)  # bigarrena: biek dena dutela ziurtatzeko
+    pasatu(monkeypatch, ka, kb, "gailua-a", "gailua-b")   # A → B
+    pasatu(monkeypatch, kb, ka, "gailua-b", "gailua-a")   # B → A
 
-    puntuak_a = ka.execute("SELECT puntuak FROM partida_jokalariak").fetchone()[0]
-    puntuak_b = kb.execute("SELECT puntuak FROM partida_jokalariak").fetchone()[0]
-    assert puntuak_a == puntuak_b
+    for k in (ka, kb):
+        assert k.execute("SELECT COUNT(*) FROM partidak").fetchone()[0] == 2
     assert gertaerak.egoeraren_hatz_marka(ka) == gertaerak.egoeraren_hatz_marka(kb)
 
 
-def test_ezabatzea_ez_da_berpizten(tmp_path, monkeypatch, taldea):
-    """Sinkronizazioak ezin du ezabatutako partida bat itzularazi."""
+def test_partida_bera_bietan_editatuta_bat_datoz(tmp_path, monkeypatch):
     ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
     partida_id = uuid.uuid4().hex
 
     with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "partida_gorde", {**partida("j1"), "id": partida_id})
-    truke_osoa(monkeypatch, ka, kb)
+        gertaerak.gertaera_berria(ka, "partida_gorde", partida("j1", 30, partida_id))
+    pasatu(monkeypatch, ka, kb)
+
+    with gailua_bezala(monkeypatch, "gailua-a"):
+        gertaerak.gertaera_berria(ka, "partida_gorde", partida("j1", 31, partida_id))
+    with gailua_bezala(monkeypatch, "gailua-b"):
+        gertaerak.gertaera_berria(kb, "partida_gorde", partida("j1", 25, partida_id))
+
+    pasatu(monkeypatch, ka, kb, "gailua-a", "gailua-b")
+    pasatu(monkeypatch, kb, ka, "gailua-b", "gailua-a")
+
+    assert (ka.execute("SELECT puntuak FROM partida_jokalariak").fetchone()[0]
+            == kb.execute("SELECT puntuak FROM partida_jokalariak").fetchone()[0])
+    assert gertaerak.egoeraren_hatz_marka(ka) == gertaerak.egoeraren_hatz_marka(kb)
+
+
+def test_ezabatzea_ez_da_berpizten(tmp_path, monkeypatch):
+    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
+    partida_id = uuid.uuid4().hex
+
+    with gailua_bezala(monkeypatch, "gailua-a"):
+        gertaerak.gertaera_berria(ka, "partida_gorde", partida("j1", 30, partida_id))
+    pasatu(monkeypatch, ka, kb)
     with gailua_bezala(monkeypatch, "gailua-a"):
         gertaerak.gertaera_berria(ka, "partida_ezabatu", {"id": partida_id})
-    truke_osoa(monkeypatch, ka, kb)
-    truke_osoa(monkeypatch, ka, kb)
+    pasatu(monkeypatch, ka, kb)
+    pasatu(monkeypatch, kb, ka, "gailua-b", "gailua-a")
 
     for k in (ka, kb):
         assert k.execute("SELECT ezabatuta FROM partidak").fetchone()[0] == 1
 
 
-def test_jokalari_bera_bi_gailutan_ez_da_bikoizten(tmp_path, monkeypatch, taldea):
-    """Bakoitzak bere ordenagailuan "Oier" sartzen du: jokalari BAT izan behar da.
-
-    Identifikatzailea izenetik eratortzen denez, bi gailuek berdina kalkulatzen
-    dute eta bateratzean bat egiten dute.
-    """
-    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
-    jokalari_id = gertaerak.jokalari_id_izenetik("Oier")
-
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": jokalari_id, "izena": "Oier"})
-        gertaerak.gertaera_berria(ka, "partida_gorde", partida(jokalari_id, 30))
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        gertaerak.gertaera_berria(
-            kb, "jokalaria_gorde",
-            {"id": gertaerak.jokalari_id_izenetik("  oier  "), "izena": "oier"},
-        )
-        gertaerak.gertaera_berria(kb, "partida_gorde", partida(jokalari_id, 25))
-
-    truke_osoa(monkeypatch, ka, kb)
-
-    for k in (ka, kb):
-        assert k.execute("SELECT COUNT(*) FROM jokalariak").fetchone()[0] == 1
-        assert k.execute(
-            "SELECT COUNT(*) FROM partida_jokalariak WHERE jokalari_id = ?", (jokalari_id,)
-        ).fetchone()[0] == 2
-
-
-def test_eskaerak_bidaltzailea_kide_bihurtzen_du(tmp_path, monkeypatch, taldea):
-    """Guregana jotzen duen gailua kide ezagun bihurtzen da berehala.
-
-    Bestela sinkronizazioak norabide bakarrean funtzionatuko luke haren
-    aurkikuntza-seinalea iritsi arte (edo inoiz ez, suebaki batek multicast-a
-    norabide batean blokeatzen badu).
-    """
-    import sarea
-
-    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
-        eskaera = sinkro.eskaera_sortu(ka)
-
-    ikusitakoak = []
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        sinkro.eskaera_erantzun(kb, eskaera, kidea_ikusi=ikusitakoak.append)
-
-    assert len(ikusitakoak) == 1
-    assert ikusitakoak[0]["gailu_id"] == "gailua-a"
-    assert ikusitakoak[0]["portua"] == konfig.SYNC_PORTUA
-
-    sarea._kideak.clear()
-    sarea._kidea_gogoratu("gailua-a", "Ordenagailu-A", "192.168.1.40", konfig.SYNC_PORTUA)
-    assert [k["helbidea"] for k in sarea.kideak()] == ["192.168.1.40"]
-
-
-def test_katalogo_aldaketa_sinkronizatzen_da(tmp_path, monkeypatch, taldea):
-    """Mertzenario baten izena zuzenduta, denek ikusten dute zuzenketa."""
-    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
-
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "mertzenarioa_gorde", {
-            "kodea": "forest-patrol", "izena": "Forest Patrol (zuzendua)",
-            "hedapena": "The Marauder Expansion",
-        })
-        gertaerak.gertaera_berria(ka, "lekua_gorde", {
-            "kodea": "nirea", "izena": "The Homeland", "hedapena": "Homeland",
-        })
-
-    truke_osoa(monkeypatch, ka, kb)
-
-    for k in (ka, kb):
-        assert k.execute(
-            "SELECT izena FROM mertzenarioak WHERE kodea = 'forest-patrol'"
-        ).fetchone()[0] == "Forest Patrol (zuzendua)"
-        assert k.execute(
-            "SELECT izena FROM leku_bereziak WHERE kodea = 'nirea'"
-        ).fetchone()[0] == "The Homeland"
-    assert gertaerak.egoeraren_hatz_marka(ka) == gertaerak.egoeraren_hatz_marka(kb)
-
-
-def test_partidaren_mertzenarioak_sinkronizatzen_dira(tmp_path, monkeypatch, taldea):
+def test_datu_guztiak_bidaiatzen_dute(tmp_path, monkeypatch):
+    """Mertzenarioak, lekuak, Vagabond pertsonaia eta katalogoak barne."""
     ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
     partida_id = uuid.uuid4().hex
 
     with gailua_bezala(monkeypatch, "gailua-a"):
         gertaerak.gertaera_berria(ka, "partida_gorde", {
-            **partida("j1"), "id": partida_id,
+            "id": partida_id, "data": "2026-04-01", "mapa_kodea": "aintzira",
+            "jokalariak": [
+                {"jokalari_id": "j1", "fakzio_kodea": "vagabond",
+                 "arlote_kodea": "harrier", "puntuak": 30, "irabazlea": True},
+            ],
             "mertzenarioak": ["forest-patrol", "flame-bearers"],
             "leku_bereziak": ["tower"],
         })
-    truke_osoa(monkeypatch, ka, kb)
+        gertaerak.gertaera_berria(ka, "mertzenarioa_gorde", {
+            "kodea": "forest-patrol", "izena": "Forest Patrol (zuzendua)"})
+
+    pasatu(monkeypatch, ka, kb)
+
+    assert kb.execute(
+        "SELECT arlote_kodea FROM partida_jokalariak").fetchone()[0] == "harrier"
     assert {l[0] for l in kb.execute(
         "SELECT mertzenario_kodea FROM partida_mertzenarioak")} == {
         "forest-patrol", "flame-bearers"}
-
-    # B-k editatzen du: mertzenario bat kendu.
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        gertaerak.gertaera_berria(kb, "partida_gorde", {
-            **partida("j1"), "id": partida_id, "mertzenarioak": ["mole-artisans"],
-        })
-    truke_osoa(monkeypatch, ka, kb)
-
-    for k in (ka, kb):
-        assert [l[0] for l in k.execute(
-            "SELECT mertzenario_kodea FROM partida_mertzenarioak")] == ["mole-artisans"]
-        assert k.execute("SELECT COUNT(*) FROM partida_lekuak").fetchone()[0] == 0
+    assert [l[0] for l in kb.execute("SELECT leku_kodea FROM partida_lekuak")] == ["tower"]
+    assert kb.execute(
+        "SELECT izena FROM mertzenarioak WHERE kodea = 'forest-patrol'"
+    ).fetchone()[0] == "Forest Patrol (zuzendua)"
 
 
-def test_vagabond_pertsonaia_sinkronizatzen_da(tmp_path, monkeypatch, taldea):
+def test_iturriko_gailua_gogoratzen_da(tmp_path, monkeypatch):
     ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
     with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "partida_gorde", {
-            "id": uuid.uuid4().hex, "data": "2026-04-01",
-            "jokalariak": [
-                {"jokalari_id": "j1", "fakzio_kodea": "vagabond",
-                 "arlote_kodea": "scoundrel", "puntuak": 30, "irabazlea": True},
-            ],
-        })
-    truke_osoa(monkeypatch, ka, kb)
+        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
+    pasatu(monkeypatch, ka, kb)
 
-    assert kb.execute(
-        "SELECT arlote_kodea FROM partida_jokalariak").fetchone()[0] == "scoundrel"
+    lerroa = kb.execute("SELECT gailu_id, izena FROM gailuak").fetchone()
+    assert lerroa["gailu_id"] == "gailua-a"
+
+
+# ─── Fitxategi okerrak ──────────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(
-    "gailu_id,portua",
-    [("gailua-a", 0), ("gailua-a", 99999), ("gailua-a", "47778"), ("../etc", 47778)],
+    "edukia,zatia",
+    [
+        (b"hau ez da json", "JSON"),
+        (b'{"beste": "app"}', "Root Erregistroa"),
+        (b'["zerrenda"]', "Root Erregistroa"),
+        (b'{"formatua": "root-erregistroa", "bertsioa": "bi"}', "bertsio"),
+        (b'{"formatua": "root-erregistroa", "bertsioa": 2}', "zerrenda"),
+        (b'{"formatua": "root-erregistroa", "bertsioa": 2, "gertaerak": {}}', "zerrenda"),
+    ],
 )
-def test_kide_datu_okerrak_baztertzen_dira(gailu_id, portua):
-    import sarea
-
-    sarea._kideak.clear()
-    sarea._kidea_gogoratu(gailu_id, "izena", "192.168.1.40", portua)
-    assert sarea.kideak() == []
-
-
-# ─── Segurtasuna ────────────────────────────────────────────────────────────
-
-
-def test_beste_taldeko_fardela_baztertu(tmp_path, monkeypatch, taldea):
-    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
-        eskaera = sinkro.eskaera_sortu(ka)
-
-    # Beste talde batek (beste pasaesaldi bat) ezin du fardela ireki.
-    sinkro.taldea_konfiguratu("Beste taldea", "beste-pasaesaldia")
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        with pytest.raises(kripto.KriptoErrorea):
-            sinkro.eskaera_erantzun(kb, eskaera)
-    assert kb.execute("SELECT COUNT(*) FROM gertaerak").fetchone()[0] == 0
-
-
-def test_errepikapena_baztertu(tmp_path, monkeypatch, taldea):
-    """Fardel oso bat berriro bidaltzea (replay) ez da onartzen."""
-    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
-        eskaera = sinkro.eskaera_sortu(ka)
-
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        sinkro.eskaera_erantzun(kb, eskaera)
-        with pytest.raises(sinkro.SinkroErrorea):
-            sinkro.eskaera_erantzun(kb, eskaera)
-
-
-def test_manipulatutako_fardela_ez_da_aplikatzen(tmp_path, monkeypatch, taldea):
-    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
-        fardela = bytearray(sinkro.fardela_sortu(
-            {"mota": "bultzada", "gertaerak": gertaerak.esportatu(ka)}
-        ))
-    fardela[-5] ^= 0xFF
-
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        with pytest.raises(kripto.KriptoErrorea):
-            sinkro.eskaera_erantzun(kb, bytes(fardela))
-    assert kb.execute("SELECT COUNT(*) FROM gertaerak").fetchone()[0] == 0
-
-
-def test_gertaera_baliogabeak_iragazten_dira_sinkronizazioan(tmp_path, monkeypatch, taldea):
-    """Talde bereko gailu batek datu okerrak bidalita ere, ez dira onartzen."""
+def test_fitxategi_okerrak_baztertzen_dira(tmp_path, monkeypatch, edukia, zatia):
     kb = datu_basea(tmp_path, "b")
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        fardela = sinkro.fardela_sortu({
-            "mota": "bultzada",
-            "gertaerak": [
-                {"gertaera_id": "x1", "gailu_id": "gailua-a", "lamport": 1,
-                 "unix_ordua": int(time.time()), "mota": "partida_gorde",
-                 "entitate_id": "p1",
-                 "karga": {"id": "p1", "data": "gaur", "jokalariak": []}},
-            ],
-        })
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        sinkro.eskaera_erantzun(kb, fardela)
+    with pytest.raises(sinkro.SinkroErrorea, match=zatia):
+        sinkro.fitxategitik_inportatu(kb, edukia)
     assert kb.execute("SELECT COUNT(*) FROM gertaerak").fetchone()[0] == 0
 
 
-def test_gertaera_gehiegi_dituen_fardela_baztertu(tmp_path, monkeypatch, taldea):
+def test_formatu_zaharrak_mezu_argia_ematen_du(tmp_path):
     kb = datu_basea(tmp_path, "b")
-    with gailua_bezala(monkeypatch, "gailua-a"):
-        fardela = sinkro.fardela_sortu({
-            "mota": "bultzada",
-            "gertaerak": [{} for _ in range(sinkro.GEHIENEZ_GERTAERA_FARDELEAN + 1)],
-        })
-    with gailua_bezala(monkeypatch, "gailua-b"):
-        with pytest.raises(sinkro.SinkroErrorea):
-            sinkro.eskaera_erantzun(kb, fardela)
+    zaharra = b"ROOTSYNC1" + b"\x00\x01\x02 zifratutako zaborra"
+    with pytest.raises(sinkro.SinkroErrorea, match="zifratua"):
+        sinkro.fitxategitik_inportatu(kb, zaharra)
 
 
-# ─── Fitxategi bidezko trukea ───────────────────────────────────────────────
-
-
-def test_esportatu_eta_inportatu(tmp_path, monkeypatch, taldea):
+def test_gertaera_baliogabeak_iragazten_dira(tmp_path, monkeypatch):
+    """Fitxategi bat eskuz uki daiteke; gertaerak banaka balidatzen dira."""
     ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
     with gailua_bezala(monkeypatch, "gailua-a"):
         gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
-        gertaerak.gertaera_berria(ka, "partida_gorde", partida("j1"))
-        fardela = sinkro.fitxategira_esportatu(ka)
+        fitxategia = sinkro.fitxategira_esportatu(ka)
+
+    edukia = json.loads(fitxategia)
+    edukia["gertaerak"].append({"mota": "asmatutakoa", "karga": {"id": "x"}})
+    edukia["gertaerak"].append({"gertaera_id": "y", "mota": "jokalaria_gorde",
+                                "entitate_id": "j2", "gailu_id": "gailua-a",
+                                "lamport": 1, "unix_ordua": 0,
+                                "karga": {"id": "j2", "izena": "x" * 500}})
+    hondatua = json.dumps(edukia).encode()
 
     with gailua_bezala(monkeypatch, "gailua-b"):
-        emaitza = sinkro.fitxategitik_inportatu(kb, fardela)
-        # Berriro inportatzeak ez du ezer bikoizten (babeskopietan ohikoa da).
-        berriro = sinkro.fitxategitik_inportatu(kb, fardela)
+        emaitza = sinkro.fitxategitik_inportatu(kb, hondatua)
 
-    assert emaitza["berriak"] == 2
-    assert berriro["berriak"] == 0
-    assert gertaerak.egoeraren_hatz_marka(ka) == gertaerak.egoeraren_hatz_marka(kb)
+    assert emaitza["berriak"] == 1
+    assert len(emaitza["baztertuak"]) == 2
+    assert kb.execute("SELECT COUNT(*) FROM jokalariak").fetchone()[0] == 1
 
 
-def test_esportazioa_ez_da_irakurgarria_pasaesaldirik_gabe(tmp_path, monkeypatch, taldea):
-    ka = datu_basea(tmp_path, "a")
+def test_gertaera_gehiegi_dituen_fitxategia(tmp_path):
+    kb = datu_basea(tmp_path, "b")
+    edukia = json.dumps({
+        "formatua": "root-erregistroa", "bertsioa": 2,
+        "gertaerak": [{} for _ in range(sinkro.GEHIENEZ_GERTAERA + 1)],
+    }).encode()
+    with pytest.raises(sinkro.SinkroErrorea, match="gehiegi"):
+        sinkro.fitxategitik_inportatu(kb, edukia)
+
+
+def test_inportatu_aurretik_babeskopia_deitzen_da(tmp_path, monkeypatch):
+    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
     with gailua_bezala(monkeypatch, "gailua-a"):
-        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "OierGaraiPuntua"})
-        fardela = sinkro.fitxategira_esportatu(ka)
-    assert b"OierGaraiPuntua" not in fardela
+        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
+        fitxategia = sinkro.fitxategira_esportatu(ka)
+
+    deiak = []
+    sinkro.fitxategitik_inportatu(kb, fitxategia, aurretik=lambda: deiak.append(1))
+    assert deiak == [1]
+
+    # Fitxategia txarra bada, EZ da babeskopiarik egiten.
+    deiak.clear()
+    with pytest.raises(sinkro.SinkroErrorea):
+        sinkro.fitxategitik_inportatu(kb, b"zaborra", aurretik=lambda: deiak.append(1))
+    assert deiak == []
+
+
+# ─── Egoera ─────────────────────────────────────────────────────────────────
+
+
+def test_egoerak_hatz_marka_ematen_du(tmp_path, monkeypatch):
+    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
+    with gailua_bezala(monkeypatch, "gailua-a"):
+        gertaerak.gertaera_berria(ka, "jokalaria_gorde", {"id": "j1", "izena": "Oier"})
+        egoera_a = sinkro.egoera(ka)
+
+    assert egoera_a["gertaerak"] == 1
+    assert egoera_a["gailu_izena"] == "gailua-a"
+    with gailua_bezala(monkeypatch, "gailua-b"):
+        assert sinkro.egoera(kb)["hatz_marka"] != egoera_a["hatz_marka"]
+
+    pasatu(monkeypatch, ka, kb)
+    with gailua_bezala(monkeypatch, "gailua-b"):
+        assert sinkro.egoera(kb)["hatz_marka"] == egoera_a["hatz_marka"]

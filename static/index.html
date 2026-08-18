@@ -191,38 +191,33 @@
 
   <section id="atal-sinkro">
     <div class="txartela">
-      <h2>Taldea</h2>
+      <h2>Erregistroa partekatu</h2>
       <div class="abisua">
-        Taldearen <b>izena eta pasaesaldia</b> berdinak dituzten ordenagailu guztiek
-        elkarrekin sinkronizatzen dute. Ez dago zerbitzaririk: datuak zuzenean doaz
-        batetik bestera, zifratuta. Pasaesaldia ahoz eman lagunei, ez sarean bidali.
+        <b>Esportatu</b> sakatuta fitxategi bat sortzen da zure partida guztiekin. Bidali
+        lagunei nahi duzun bidetik (Telegram, posta, USB) eta haiek <b>Inportatu</b>
+        sakatzen dute. Berdin alderantziz: haien fitxategia inportatuz gero, haien partidak
+        zureekin batzen dira.
+        <br><br>
+        Inportatzeak ez du inoiz ezer ezabatzen — gehitu baino ez du egiten — eta fitxategi
+        bera bi aldiz inportatzeak ez du ezer bikoizten. Beraz lasai bidali eta inportatu
+        nahi adina aldiz.
       </div>
-      <div id="talde-egoera"></div>
-      <div class="lerroa">
-        <div><label>Taldearen izena</label><input id="t-izena"></div>
-        <div><label>Pasaesaldia (gutx. 8 karaktere)</label><input type="password" id="t-pasa"></div>
-        <button class="botoia" id="t-gorde">Ezarri</button>
-      </div>
-    </div>
-
-    <div class="txartela">
-      <h2>Sare lokaleko kideak</h2>
-      <div id="kide-zerrenda" class="txiki">Bilatzen…</div>
-      <div style="margin-top:12px; display:flex; gap:8px">
-        <button class="botoia" id="s-orain">Orain sinkronizatu</button>
-        <button class="botoia isila" id="s-gailu-izena">Gailuari izena aldatu</button>
-      </div>
-      <div id="sinkro-emaitza" class="txiki" style="margin-top:10px"></div>
-    </div>
-
-    <div class="txartela">
-      <h2>Fitxategi bidezko trukea</h2>
-      <p class="txiki">Sare lokalean ez zaudetenerako: esportatu fitxategi zifratua eta
-      bidali nahi duzun bidetik (USB, posta, hodeia). Taldeko pasaesaldirik gabe ez du balio.</p>
       <div style="display:flex; gap:8px; flex-wrap:wrap">
-        <button class="botoia" id="s-esportatu">Esportatu .rootsync</button>
+        <button class="botoia" id="s-esportatu">Esportatu fitxategia</button>
         <button class="botoia isila" id="s-inportatu-botoia">Inportatu fitxategia</button>
-        <input type="file" id="s-fitxategia" accept=".rootsync,.rootbackup" style="display:none">
+        <input type="file" id="s-fitxategia" accept=".rootsync,.json" style="display:none">
+      </div>
+      <p class="txiki" style="margin-top:12px">
+        Fitxategia testu laua da (JSON): edonork ireki eta irakur dezake. Ez du pasaesaldirik
+        behar, baina kontuan izan hori partekatzeko bidea aukeratzean.
+      </p>
+    </div>
+
+    <div class="txartela">
+      <h2>Egoera</h2>
+      <div id="sinkro-egoera" class="txiki"></div>
+      <div style="margin-top:12px">
+        <button class="botoia isila" id="s-gailu-izena">Gailuari izena aldatu</button>
       </div>
     </div>
   </section>
@@ -362,7 +357,7 @@ document.querySelectorAll("nav button").forEach(botoia => {
 async function hasieratu() {
   DATUAK = await api("/api/hasiera");
   document.getElementById("gailu-info").textContent =
-    `${DATUAK.sinkro.gailu_izena} · ${DATUAK.sinkro.taldea || "talderik gabe"}`;
+    `${DATUAK.sinkro.gailu_izena} · ${DATUAK.laburpena.partidak} partida`;
 
   aukerak(document.getElementById("f-mapa"), DATUAK.mapak, "kodea", "izena", "— mapa —");
   aukerak(document.getElementById("f-sorta"), DATUAK.karta_sortak, "kodea", "izena", "— sorta —");
@@ -802,72 +797,38 @@ async function katalogoaEzabatu(katalogoa, sarrera) {
   } catch (e) { mezua(e.message, false); }
 }
 
-// ─── Sinkronizazioa ────────────────────────────────────────────────────────
+// ─── Fitxategi bidezko trukea ──────────────────────────────────────────────
 
 async function sinkroKargatu() {
   try {
     const s = await api("/api/sinkro/egoera");
-    const egoera = document.getElementById("talde-egoera");
+    const egoera = document.getElementById("sinkro-egoera");
     egoera.textContent = "";
-    egoera.appendChild(el("p", { klasea: "txiki", testua: s.taldea
-      ? `Taldea: ${s.taldea} · marka ${s.talde_marka.slice(0, 12)}… · gertaerak: ${s.gertaerak}`
-      : "Ez dago talderik ezarrita. Sinkronizatzeko, ezarri izena eta pasaesaldia." }));
-    if (s.taldea) {
-      egoera.appendChild(el("p", { klasea: "txiki",
-        testua: `Erregistroaren hatz-marka: ${s.hatz_marka.slice(0, 16)}… (berdina bada, sinkronizatuta zaudete)` }));
-    }
-    if (s.taldea) document.getElementById("t-izena").value = s.taldea;
 
-    const kideak = document.getElementById("kide-zerrenda");
-    kideak.textContent = "";
-    if (!s.kideak.length) {
-      kideak.appendChild(el("p", { klasea: "txiki",
-        testua: "Ez da kiderik ikusten sare lokalean. Beste ordenagailuak piztuta eta talde berean egon behar du." }));
-    }
-    for (const k of s.kideak) {
-      kideak.appendChild(el("div", { klasea: "kide" }, [
-        el("span", { testua: `${k.izena || k.gailu_id.slice(0, 8)} · ${k.helbidea}` }),
-        el("span", { klasea: "txiki", testua: `duela ${k.duela}s` }),
-      ]));
-    }
+    egoera.appendChild(el("p", {
+      testua: `Gailu hau: ${s.gailu_izena} · ${s.gertaerak} gertaera erregistroan`,
+    }));
+    // Bi ordenagailuk hatz-marka bera badute, erregistro berbera dute. Fitxategi
+    // bat inportatu ondoren begiratzeko modurik zuzenena da.
+    egoera.appendChild(el("p", {
+      testua: `Erregistroaren hatz-marka: ${s.hatz_marka.slice(0, 16)}…`,
+    }));
+    egoera.appendChild(el("p", {
+      testua: "Beste ordenagailuan hatz-marka bera agertzen bada, biek gauza bera duzue.",
+    }));
 
-    const emaitza = document.getElementById("sinkro-emaitza");
-    emaitza.textContent = "";
-    if (s.azken_sinkro.noiz) {
-      const laburpena = (s.azken_sinkro.emaitza || [])
-        .map(r => `${r.kidea}: ${r.jasoak} jaso, ${r.bidaliak} bidali`).join(" · ");
-      emaitza.textContent = s.azken_sinkro.errorea
-        ? "Azkena: " + s.azken_sinkro.errorea
-        : "Azkena: " + (laburpena || "aldaketarik ez");
+    if (s.gailuak.length) {
+      egoera.appendChild(el("h3", { testua: "Zein ordenagailutako datuak dituzun" }));
+      for (const g of s.gailuak) {
+        egoera.appendChild(el("div", { klasea: "kide" }, [
+          el("span", { testua: g.izena || g.gailu_id.slice(0, 8) }),
+          el("span", { testua: g.azken_ikusia
+            ? new Date(g.azken_ikusia * 1000).toLocaleDateString("eu") : "—" }),
+        ]));
+      }
     }
   } catch (e) { mezua(e.message, false); }
 }
-
-document.getElementById("t-gorde").onclick = async () => {
-  try {
-    const r = await api("/api/sinkro/taldea", {
-      method: "POST",
-      body: JSON.stringify({
-        izena: document.getElementById("t-izena").value,
-        pasaesaldia: document.getElementById("t-pasa").value,
-      }),
-    });
-    document.getElementById("t-pasa").value = "";
-    mezua(`Taldea ezarrita: ${r.izena}. ${r.oharra}`);
-    await sinkroKargatu(); await hasieratu();
-  } catch (e) { mezua(e.message, false); }
-};
-
-document.getElementById("s-orain").onclick = async (ev) => {
-  ev.target.disabled = true;
-  try {
-    const r = await api("/api/sinkro/orain", { method: "POST" });
-    const jasoak = (r.emaitzak || []).reduce((s, x) => s + x.jasoak, 0);
-    mezua(`Sinkronizatuta: ${r.kideak} kide, ${jasoak} gertaera berri.` +
-          ((r.akatsak || []).length ? " Akatsak: " + r.akatsak.join("; ") : ""));
-    await hasieratu(); await sinkroKargatu();
-  } catch (e) { mezua(e.message, false); } finally { ev.target.disabled = false; }
-};
 
 document.getElementById("s-gailu-izena").onclick = async () => {
   const izena = prompt("Gailu honen izena:");
@@ -881,13 +842,14 @@ document.getElementById("s-gailu-izena").onclick = async () => {
 document.getElementById("s-esportatu").onclick = async () => {
   try {
     const erantzuna = await fetch("/api/sinkro/esportatu", { headers: { "X-Root-Token": TOKENA } });
-    if (!erantzuna.ok) throw new Error("Esportatzeak huts egin du (talderik ba al dago?)");
+    if (!erantzuna.ok) throw new Error("Esportatzeak huts egin du");
     const blob = await erantzuna.blob();
     const url = URL.createObjectURL(blob);
-    const lotura = el("a", { href: url, download: "root-erregistroa.rootsync" });
+    const izena = `root-erregistroa-${new Date().toISOString().slice(0, 10)}.rootsync`;
+    const lotura = el("a", { href: url, download: izena });
     document.body.appendChild(lotura); lotura.click(); lotura.remove();
     URL.revokeObjectURL(url);
-    mezua("Fitxategi zifratua sortuta.");
+    mezua(`Fitxategia sortuta: ${izena}. Orain bidali lagunei.`);
   } catch (e) { mezua(e.message, false); }
 };
 
@@ -898,11 +860,15 @@ document.getElementById("s-fitxategia").onchange = async (ev) => {
   try {
     const r = await api("/api/sinkro/inportatu", {
       method: "POST",
-      headers: { "Content-Type": "application/octet-stream" },
+      headers: { "Content-Type": "application/json" },
       body: await fitxategia.arrayBuffer(),
     });
-    mezua(`Inportatuta: ${r.berriak} gertaera berri (babeskopia egin da aurretik).`);
+    const baztertuak = (r.baztertuak || []).length;
+    mezua(`${r.iturria}-ren fitxategia inportatuta: ${r.berriak} gertaera berri ` +
+          `(${r.guztira} guztira${baztertuak ? `, ${baztertuak} baliogabe baztertuta` : ""}). ` +
+          "Babeskopia bat egin da aurretik.");
     await hasieratu();
+    await sinkroKargatu();
   } catch (e) { mezua(e.message, false); }
   ev.target.value = "";
 };
@@ -954,10 +920,8 @@ document.getElementById("b-birsortu").onclick = async () => {
 
 // ─── Abiaraztea ────────────────────────────────────────────────────────────
 
+// Galdeketa periodikorik ez: ez dago atzeko planoan ezer gertatzen denik.
 hasieratu().catch(e => mezua(e.message, false));
-setInterval(() => {
-  if (document.getElementById("atal-sinkro").classList.contains("ikusgai")) sinkroKargatu();
-}, 10000);
 </script>
 </body>
 </html>
