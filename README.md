@@ -18,10 +18,18 @@ zerbitzaririk, ez konturik behar.
 
 ## Instalazioa
 
-Dependentzia bakarra Flask da, Debian 13-n instalatuta datorrena. Bestela:
+Dependentzia bakarra Flask da. Debian 13-n instalatuta dator; beste banaketa batzuetan
+eskuz instalatu behar da:
 
 ```bash
+# Debian / Ubuntu eta eratorriak
 sudo apt install python3-flask
+
+# Arch Linux eta eratorriak (Manjaro, EndeavourOS...)
+sudo pacman -S python-flask
+
+# Fedora
+sudo dnf install python3-flask
 ```
 
 Abiarazi:
