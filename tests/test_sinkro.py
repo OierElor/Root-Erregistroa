@@ -199,6 +199,59 @@ def test_eskaerak_bidaltzailea_kide_bihurtzen_du(tmp_path, monkeypatch, taldea):
     assert [k["helbidea"] for k in sarea.kideak()] == ["192.168.1.40"]
 
 
+def test_katalogo_aldaketa_sinkronizatzen_da(tmp_path, monkeypatch, taldea):
+    """Mertzenario baten izena zuzenduta, denek ikusten dute zuzenketa."""
+    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
+
+    with gailua_bezala(monkeypatch, "gailua-a"):
+        gertaerak.gertaera_berria(ka, "mertzenarioa_gorde", {
+            "kodea": "forest-patrol", "izena": "Forest Patrol (zuzendua)",
+            "hedapena": "The Marauder Expansion",
+        })
+        gertaerak.gertaera_berria(ka, "lekua_gorde", {
+            "kodea": "nirea", "izena": "The Homeland", "hedapena": "Homeland",
+        })
+
+    truke_osoa(monkeypatch, ka, kb)
+
+    for k in (ka, kb):
+        assert k.execute(
+            "SELECT izena FROM mertzenarioak WHERE kodea = 'forest-patrol'"
+        ).fetchone()[0] == "Forest Patrol (zuzendua)"
+        assert k.execute(
+            "SELECT izena FROM leku_bereziak WHERE kodea = 'nirea'"
+        ).fetchone()[0] == "The Homeland"
+    assert gertaerak.egoeraren_hatz_marka(ka) == gertaerak.egoeraren_hatz_marka(kb)
+
+
+def test_partidaren_mertzenarioak_sinkronizatzen_dira(tmp_path, monkeypatch, taldea):
+    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
+    partida_id = uuid.uuid4().hex
+
+    with gailua_bezala(monkeypatch, "gailua-a"):
+        gertaerak.gertaera_berria(ka, "partida_gorde", {
+            **partida("j1"), "id": partida_id,
+            "mertzenarioak": ["forest-patrol", "flame-bearers"],
+            "leku_bereziak": ["tower"],
+        })
+    truke_osoa(monkeypatch, ka, kb)
+    assert {l[0] for l in kb.execute(
+        "SELECT mertzenario_kodea FROM partida_mertzenarioak")} == {
+        "forest-patrol", "flame-bearers"}
+
+    # B-k editatzen du: mertzenario bat kendu.
+    with gailua_bezala(monkeypatch, "gailua-b"):
+        gertaerak.gertaera_berria(kb, "partida_gorde", {
+            **partida("j1"), "id": partida_id, "mertzenarioak": ["mole-artisans"],
+        })
+    truke_osoa(monkeypatch, ka, kb)
+
+    for k in (ka, kb):
+        assert [l[0] for l in k.execute(
+            "SELECT mertzenario_kodea FROM partida_mertzenarioak")] == ["mole-artisans"]
+        assert k.execute("SELECT COUNT(*) FROM partida_lekuak").fetchone()[0] == 0
+
+
 @pytest.mark.parametrize(
     "gailu_id,portua",
     [("gailua-a", 0), ("gailua-a", 99999), ("gailua-a", "47778"), ("../etc", 47778)],

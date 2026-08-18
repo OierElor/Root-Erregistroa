@@ -133,6 +133,12 @@ def leheneratu(konn: sqlite3.Connection, izena: str) -> dict:
     finally:
         iturri_konn.close()
 
+    # Kopia zaharrago batek aplikazioaren bertsio zaharragoko eskema du: taula
+    # berriak falta litzaizkioke. Idempotentea da eta falta dena bakarrik
+    # gehitzen du, leheneratutako datuak ukitu gabe.
+    db.eskema_ezarri(konn)
+    konn.commit()
+
     return {
         "leheneratua": izena,
         "aurreko_kopia": segurtasun_kopia.name,

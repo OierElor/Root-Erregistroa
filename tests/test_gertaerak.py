@@ -283,6 +283,102 @@ def test_puntu_eta_jokalari_mugak(konn):
         gertaerak.karga_balidatu("partida_gorde", gehiegi)
 
 
+def test_mertzenarioak_eta_lekuak_gordetzen_dira(konn):
+    karga = partida_karga("j1")
+    karga["mertzenarioak"] = ["forest-patrol", "mole-artisans"]
+    karga["leku_bereziak"] = ["tower"]
+    gertaerak.gertaera_berria(konn, "partida_gorde", karga)
+
+    assert {l[0] for l in konn.execute(
+        "SELECT mertzenario_kodea FROM partida_mertzenarioak WHERE partida_id = ?",
+        (karga["id"],))} == {"forest-patrol", "mole-artisans"}
+    assert [l[0] for l in konn.execute(
+        "SELECT leku_kodea FROM partida_lekuak WHERE partida_id = ?",
+        (karga["id"],))] == ["tower"]
+
+
+def test_editatzeak_mertzenarioak_ordezkatzen_ditu(konn):
+    karga = partida_karga("j1")
+    karga["mertzenarioak"] = ["forest-patrol", "mole-artisans"]
+    gertaerak.gertaera_berria(konn, "partida_gorde", karga)
+
+    karga["mertzenarioak"] = ["flame-bearers"]
+    gertaerak.gertaera_berria(konn, "partida_gorde", karga)
+
+    assert [l[0] for l in konn.execute(
+        "SELECT mertzenario_kodea FROM partida_mertzenarioak")] == ["flame-bearers"]
+
+
+def test_gertaera_zaharrak_eremu_berririk_gabe_baliozkoak_dira(konn):
+    """Sinkronizazioaren bateragarritasuna: erregistroan dauden gertaera
+    zaharrek ez dute `mertzenarioak` eremurik, eta baliozkoak izaten jarraitu
+    behar dute."""
+    zaharra = {
+        "gertaera_id": uuid.uuid4().hex,
+        "gailu_id": "gailu-zaharra",
+        "lamport": 3,
+        "unix_ordua": 1_700_000_000,
+        "mota": "partida_gorde",
+        "entitate_id": "p-zaharra",
+        "karga": {
+            "id": "p-zaharra", "data": "2026-01-01", "mapa_kodea": "udazkena",
+            "karta_sorta": "estandarra", "oharrak": None,
+            "jokalariak": [{"jokalari_id": "j1", "fakzio_kodea": "marquise", "puntuak": 30,
+                            "hasiera_ordena": 1, "irabazlea": True, "garaipen_mota": "puntuak"}],
+        },
+    }
+    emaitza = gertaerak.gehitu(konn, [zaharra])
+    assert emaitza["berriak"] == 1
+    assert konn.execute(
+        "SELECT COUNT(*) FROM partida_mertzenarioak WHERE partida_id = 'p-zaharra'"
+    ).fetchone()[0] == 0
+
+
+@pytest.mark.parametrize(
+    "eremua,balioa",
+    [
+        ("mertzenarioak", ["forest-patrol", "forest-patrol"]),   # bikoiztua
+        ("mertzenarioak", ["Forest Patrol"]),                    # kode baliogabea
+        ("mertzenarioak", "forest-patrol"),                      # ez da zerrenda
+        ("mertzenarioak", [f"m{i}" for i in range(30)]),         # gehiegi
+        ("leku_bereziak", ["tower", "tower"]),
+        ("leku_bereziak", [f"l{i}" for i in range(15)]),
+    ],
+)
+def test_mertzenario_eta_leku_zerrenda_okerrak(konn, eremua, balioa):
+    karga = partida_karga("j1")
+    karga[eremua] = balioa
+    with pytest.raises(gertaerak.GertaeraErrorea):
+        gertaerak.karga_balidatu("partida_gorde", karga)
+
+
+def test_katalogo_desberdinek_ez_dute_talkarik(konn):
+    """Mertzenario batek eta leku batek kode bera izan dezakete.
+
+    `entitate_id`-a globala denez, aurrizkirik gabe entitate bakarra izango
+    lirateke eta elkar hondatuko lukete.
+    """
+    gertaerak.gertaera_berria(konn, "mertzenarioa_gorde",
+                              {"kodea": "tower", "izena": "Dorrezainak"})
+    gertaerak.gertaera_berria(konn, "lekua_gorde",
+                              {"kodea": "tower", "izena": "The Tower"})
+
+    assert konn.execute(
+        "SELECT izena FROM mertzenarioak WHERE kodea = 'tower'").fetchone()[0] == "Dorrezainak"
+    assert konn.execute(
+        "SELECT izena FROM leku_bereziak WHERE kodea = 'tower'").fetchone()[0] == "The Tower"
+    assert {l[0] for l in konn.execute("SELECT entitate_id FROM gertaerak")} == {
+        "mertzenarioa:tower", "lekua:tower"}
+
+
+def test_katalogoko_sarrera_ezabatzea(konn):
+    gertaerak.gertaera_berria(konn, "mertzenarioa_gorde",
+                              {"kodea": "forest-patrol", "izena": "Forest Patrol"})
+    gertaerak.gertaera_berria(konn, "mertzenarioa_ezabatu", {"kodea": "forest-patrol"})
+    assert konn.execute(
+        "SELECT ezabatuta FROM mertzenarioak WHERE kodea = 'forest-patrol'").fetchone()[0] == 1
+
+
 def test_jokalari_errepikatua_partida_batean(konn):
     karga = partida_karga("j1")
     karga["jokalariak"].append({"jokalari_id": "j1", "puntuak": 5})

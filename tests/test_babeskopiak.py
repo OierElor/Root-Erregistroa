@@ -97,6 +97,30 @@ def test_garbitzeak_egun_bakoitzeko_bat_gordetzen_du(ingurunea, monkeypatch):
     assert len(gelditzen_direnak) < 9
 
 
+def test_eskema_zaharreko_kopia_leheneratzeak_taulak_osatzen_ditu(ingurunea):
+    """Bertsio zaharrago batekin egindako babeskopiak taula berriak falta ditu.
+
+    Leheneratu ondoren eskema osatzen ez bada, aplikazioak huts egingo luke
+    berrabiarazi arte.
+    """
+    import sqlite3
+
+    kopia = babeskopiak.kopia_egin(ingurunea)
+    kopia_konn = sqlite3.connect(kopia)
+    for taula in ("partida_mertzenarioak", "partida_lekuak", "mertzenarioak", "leku_bereziak"):
+        kopia_konn.execute(f"DROP TABLE {taula}")
+    kopia_konn.commit()
+    kopia_konn.close()
+
+    babeskopiak.leheneratu(ingurunea, kopia.name)
+
+    izenak = {
+        l[0] for l in ingurunea.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    }
+    assert {"partida_mertzenarioak", "partida_lekuak", "mertzenarioak", "leku_bereziak"} <= izenak
+    assert ingurunea.execute("SELECT COUNT(*) FROM mertzenarioak").fetchone()[0] > 0
+
+
 def test_abioko_kopia_egunean_behin(ingurunea):
     lehena = babeskopiak.abioko_kopia(ingurunea)
     bigarrena = babeskopiak.abioko_kopia(ingurunea)

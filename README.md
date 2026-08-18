@@ -4,9 +4,11 @@ Root mahai-jokoaren partiden erregistroa, **zerbitzaririk gabe** sinkronizatzen 
 taldeko ordenagailu guztien artean, eta babeskopia automatikoekin.
 
 * Partidak sartu, **editatu** eta ezabatu: data, mapa, karta sorta, jokalari bakoitzaren
-  fakzioa, puntuak eta garaipen mota.
+  fakzioa, puntuak eta garaipen mota, erabilitako **mertzenarioak** (Hirelings) eta
+  **leku bereziak** (Landmarks).
+* Jokoaren izen guztiak **ingelesez, kartetan bezala** (interfazea euskaraz).
 * Estatistikak: jokalarien sailkapena, fakzioen irabazte-tasak, jokalari bakoitzak zein
-  fakziorekin jokatzen duen ondoen.
+  fakziorekin jokatzen duen ondoen, eta mertzenario/leku erabilienak.
 * **Sinkronizazioa zerbitzaririk gabe**: sare lokalean automatikoki, edo fitxategi zifratu
   baten bidez (USB, posta, hodeia) urrutitik.
 * **Babeskopiak**: automatikoak, aldaketa arriskutsuen aurretik, eta eskuz.
@@ -67,12 +69,30 @@ ulertzen dute elkar.
 Bi bideek gauza bera erabiltzen dute barnean, eta biak dira **norabide bikoak**: partidak
 zeinek sartu dituen axola gabe, denek dena amaitzen dute edukitzen.
 
+### Jokoaren izenak eta katalogoak
+
+Fakzioak, mapak, karta sortak, mertzenarioak eta leku bereziak **ingelesez** ageri dira,
+kartetan eta arauetan bezala (Marquise de Cat, Autumn, Forest Patrol, The Tower…).
+Interfazea bera euskaraz dago.
+
+`Katalogoak` atalean izen horiek zuzendu, berriak gehitu edo zerrendatik kendu ditzakezu —
+hedapen berri bat erosi duzunean, adibidez. Aldaketak gertaerak dira: beste ordenagailuetara
+sinkronizatzen dira eta **ez dira galtzen aplikazioa eguneratzean**.
+
+> Barruko kodeak (`marquise`, `udazkena`) ez dira inoiz aldatzen, gertaeretan idatzita
+> baitaude. Izena bakarrik aldatzen da, beraz lehendik sartutako partidek balio dute beti.
+
+Mertzenario bakoitzak izen desberdina du sustatuta (*promoted*) edo jaitsita (*demoted*)
+dagoenean — Forest Patrol / Feline Physicians, adibidez — beraz erabilitako karta hautatzeak
+dena esaten du berez.
+
 ### Partidak editatzea
 
 Partiden zerrendan, **Editatu** botoiak partida formularioan kargatzen du: data, mapa,
-karta sorta, oharrak eta jokalari guztiak bere puntu eta fakzioekin. Jokalariak kendu
-(× botoia) edo gehitu ditzakezu, eta `Aldaketak gorde` sakatuta partida **ordezkatu**
-egiten da, bat berria sortu gabe. `Utzi edizioa` sakatuta ez da ezer aldatzen.
+karta sorta, oharrak, jokalari guztiak bere puntu eta fakzioekin, eta erabilitako
+mertzenario eta lekuak. Jokalariak kendu (× botoia) edo gehitu ditzakezu, eta
+`Aldaketak gorde` sakatuta partida **ordezkatu** egiten da, bat berria sortu gabe.
+`Utzi edizioa` sakatuta ez da ezer aldatzen.
 
 Editatzea ere sinkronizatu egiten da: aldaketa gertaera berri bat da partida beraren
 gainean, eta ordenagailu guztietara iristen da. Bi lagunek partida bera aldatzen badute
@@ -174,7 +194,7 @@ Interfazearen portua (3000) **ez da inoiz** kanpora zabaldu behar.
 | `sarea.py` | LAN aurkikuntza eta trukea |
 | `babeskopiak.py` | Kopiak, atxikitzea, leheneratzea |
 | `estatistikak.py` | Kontsultak |
-| `db.py`, `eskema.sql` | Datu-basea eta hazi-datuak (fakzioak, mapak) |
+| `db.py`, `eskema.sql` | Datu-basea eta hazi-datuak (fakzioak, mapak, mertzenarioak, lekuak) |
 | `static/index.html` | Interfaze osoa (dependentziarik gabe) |
 
 Testak:

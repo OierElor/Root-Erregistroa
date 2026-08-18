@@ -125,6 +125,14 @@ def json_gorputza() -> dict:
     return datuak
 
 
+# Katalogo guztiek egitura bera dute; taula-izena kodean dago finkatuta, ez
+# eskaeran (ikus `_KATALOGOAK`), beraz ez dago SQL injekziorako biderik.
+_KATALOGO_KONTSULTA = (
+    "SELECT kodea, izena, hedapena FROM %s WHERE ezabatuta = 0 "
+    "ORDER BY hedapena, izena"
+)
+
+
 # ─── Interfazea ─────────────────────────────────────────────────────────────
 
 
@@ -156,9 +164,13 @@ def hasiera():
                 "WHERE ezabatuta = 0 ORDER BY hedapena, izena"
             )
         ],
+        mertzenarioak=[dict(l) for l in k.execute(_KATALOGO_KONTSULTA % "mertzenarioak")],
+        leku_bereziak=[dict(l) for l in k.execute(_KATALOGO_KONTSULTA % "leku_bereziak")],
         mapak=[dict(l) for l in k.execute("SELECT * FROM mapak ORDER BY izena")],
         karta_sortak=[dict(l) for l in k.execute("SELECT * FROM karta_sortak")],
-        garaipen_motak=list(db.GARAIPEN_MOTAK),
+        garaipen_motak=[
+            {"kodea": kodea, "izena": izena} for kodea, izena in db.GARAIPEN_MOTAK
+        ],
         sinkro=sinkro.egoera(k),
         ezarpenak=konfig.ezarpenak(),
     )
@@ -259,6 +271,8 @@ def partida_gorde():
         "karta_sorta": datuak.get("karta_sorta"),
         "oharrak": datuak.get("oharrak"),
         "jokalariak": prestatuak,
+        "mertzenarioak": datuak.get("mertzenarioak"),
+        "leku_bereziak": datuak.get("leku_bereziak"),
     }
     gertaerak.gertaera_berria(k, "partida_gorde", karga)
     return jsonify(ok=True, id=karga["id"])
@@ -274,20 +288,46 @@ def partida_ezabatu(partida_id):
 # ─── Fakzioak ───────────────────────────────────────────────────────────────
 
 
-@app.route("/api/fakzioak", methods=["POST"])
+# Katalogoen izen publikoa → (gorde gertaera, ezabatu gertaera, kolorea du?)
+_KATALOGOAK = {
+    "fakzioak":      ("fakzioa_gorde", "fakzioa_ezabatu", True),
+    "mertzenarioak": ("mertzenarioa_gorde", "mertzenarioa_ezabatu", False),
+    "leku-bereziak": ("lekua_gorde", "lekua_ezabatu", False),
+}
+
+
+@app.route("/api/katalogoak/<katalogoa>", methods=["POST"])
 @akatsak_harrapatu
-def fakzioa_gorde():
+def katalogoa_gorde(katalogoa):
+    """Katalogo bateko sarrera bat gehitu edo izena aldatu.
+
+    Gertaera bat denez, aldaketa ordenagailu guztietara sinkronizatzen da; eta
+    `azken_lamport` mugitzen duenez, hurrengo abioan hazi-datuek ez dute
+    berridazten (ikus `db.hasieratu`).
+    """
+    if katalogoa not in _KATALOGOAK:
+        raise ValueError("Katalogo ezezaguna")
+    gorde_mota, _, kolorea_du = _KATALOGOAK[katalogoa]
+
     datuak = json_gorputza()
-    gertaerak.gertaera_berria(
-        konn(),
-        "fakzioa_gorde",
-        {
-            "kodea": datuak.get("kodea"),
-            "izena": datuak.get("izena"),
-            "hedapena": datuak.get("hedapena") or "Norberarena",
-            "kolorea": datuak.get("kolorea") or "#888888",
-        },
-    )
+    karga = {
+        "kodea": datuak.get("kodea"),
+        "izena": datuak.get("izena"),
+        "hedapena": datuak.get("hedapena") or "Norberarena",
+    }
+    if kolorea_du:
+        karga["kolorea"] = datuak.get("kolorea") or "#888888"
+
+    gertaerak.gertaera_berria(konn(), gorde_mota, karga)
+    return jsonify(ok=True, kodea=karga["kodea"])
+
+
+@app.route("/api/katalogoak/<katalogoa>/<kodea>", methods=["DELETE"])
+@akatsak_harrapatu
+def katalogoa_ezabatu(katalogoa, kodea):
+    if katalogoa not in _KATALOGOAK:
+        raise ValueError("Katalogo ezezaguna")
+    gertaerak.gertaera_berria(konn(), _KATALOGOAK[katalogoa][1], {"kodea": kodea})
     return jsonify(ok=True)
 
 
@@ -304,6 +344,7 @@ def estatistikak_ikusi():
         fakzioak=estatistikak.fakzioen_estatistikak(k),
         matrizea=estatistikak.jokalari_fakzio_matrizea(k),
         bilakaera=estatistikak.bilakaera(k),
+        **estatistikak.osagarrien_erabilera(k),
     )
 
 

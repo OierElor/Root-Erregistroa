@@ -70,6 +70,20 @@
   .laburpen-sareta { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
   .laburpen-sareta div { background: var(--panela2); border-radius: 6px; padding: 10px 12px; }
   .laburpen-sareta b { display: block; font-size: 22px; color: var(--nabar); }
+  details.tolesgarria { border: 1px solid var(--marra); border-radius: 6px; padding: 9px 12px;
+                        margin-top: 10px; background: var(--panela2); }
+  details.tolesgarria summary { cursor: pointer; font-size: 13px; }
+  details.tolesgarria summary span { color: var(--lausoa); }
+  .hautaketa { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+               gap: 3px 14px; margin-top: 10px; }
+  .hautaketa label { display: flex; align-items: center; gap: 7px; font-size: 13px;
+                     color: var(--testua); margin: 0; cursor: pointer; }
+  .hautaketa input { width: auto; }
+  .hautaketa h4 { grid-column: 1 / -1; margin: 10px 0 2px; font-size: 11px; color: var(--nabar);
+                  text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
+  .txipa { display: inline-block; background: var(--panela); border: 1px solid var(--marra);
+           border-radius: 10px; padding: 1px 9px; font-size: 12px; color: var(--lausoa);
+           margin: 4px 4px 0 0; }
 </style>
 </head>
 <body>
@@ -84,6 +98,7 @@
   <button data-atala="berria">Partida berria</button>
   <button data-atala="estatistikak">Estatistikak</button>
   <button data-atala="sinkro">Sinkronizazioa</button>
+  <button data-atala="katalogoak">Katalogoak</button>
   <button data-atala="babeskopiak">Babeskopiak</button>
 </nav>
 
@@ -117,6 +132,16 @@
       <h3>Jokalariak</h3>
       <div id="f-jokalariak"></div>
       <button class="botoia isila" id="f-gehitu">+ Jokalaria</button>
+
+      <details class="tolesgarria">
+        <summary>Mertzenarioak — <span id="f-mertzenarioak-laburpena">bat ere ez</span></summary>
+        <div class="hautaketa" id="f-mertzenarioak"></div>
+      </details>
+      <details class="tolesgarria">
+        <summary>Leku bereziak — <span id="f-lekuak-laburpena">bat ere ez</span></summary>
+        <div class="hautaketa" id="f-lekuak"></div>
+      </details>
+
       <div style="margin-top:14px">
         <label>Oharrak</label>
         <textarea id="f-oharrak" rows="2" placeholder="Adib. koalizioa, gertaera bereziak…"></textarea>
@@ -142,6 +167,22 @@
       <h2>Jokalaria eta fakzioa</h2>
       <div class="taula-bilgarria"><table id="est-matrizea"></table></div>
     </div>
+    <div class="txartela">
+      <h2>Mertzenario eta leku erabilienak</h2>
+      <div class="taula-bilgarria"><table id="est-osagarriak"></table></div>
+    </div>
+  </section>
+
+  <section id="atal-katalogoak">
+    <div class="txartela">
+      <h2>Katalogoak</h2>
+      <div class="abisua">
+        Hemen jokoaren izenak zuzendu edo berriak gehitu ditzakezu (hedapen berri bat, adibidez).
+        Aldaketak gertaerak dira: ordenagailu guztietara sinkronizatzen dira, eta ez dira
+        galtzen aplikazioa eguneratzean.
+      </div>
+      <div id="katalogo-edukia"></div>
+    </div>
   </section>
 
   <section id="atal-sinkro">
@@ -154,7 +195,7 @@
       </div>
       <div id="talde-egoera"></div>
       <div class="lerroa">
-        <div><label>Taldearen izena</label><input id="t-izena" placeholder="Adib. Aramaixoko basoa"></div>
+        <div><label>Taldearen izena</label><input id="t-izena"></div>
         <div><label>Pasaesaldia (gutx. 8 karaktere)</label><input type="password" id="t-pasa"></div>
         <button class="botoia" id="t-gorde">Ezarri</button>
       </div>
@@ -197,7 +238,10 @@
 
 <script>
 const TOKENA = "__SAIO_TOKENA__";
-let DATUAK = { jokalariak: [], fakzioak: [], mapak: [], karta_sortak: [], garaipen_motak: [] };
+let DATUAK = {
+  jokalariak: [], fakzioak: [], mapak: [], karta_sortak: [], garaipen_motak: [],
+  mertzenarioak: [], leku_bereziak: [],
+};
 // Partida bat editatzen ari bagara, haren identifikatzailea. Gordetzean id hori
 // bidaltzeak partida ordezkatzen du, berri bat sortu beharrean.
 let EDITATZEN = null;
@@ -249,6 +293,49 @@ function aukerak(select, elementuak, balioGakoa, izenGakoa, hutsa) {
   }
 }
 
+function garaipenIzena(kodea) {
+  const g = DATUAK.garaipen_motak.find(x => x.kodea === kodea);
+  return g ? g.izena : kodea;
+}
+
+// ─── Kontrol-lauki multzoak (mertzenarioak eta leku bereziak) ──────────────
+
+function hautaketaBete(edukiontziId, elementuak, laburpenId) {
+  const edukiontzia = document.getElementById(edukiontziId);
+  edukiontzia.textContent = "";
+  let azkenHedapena = null;
+
+  for (const e of elementuak) {
+    if (e.hedapena !== azkenHedapena) {
+      azkenHedapena = e.hedapena;
+      edukiontzia.appendChild(el("h4", { testua: e.hedapena || "—" }));
+    }
+    const lauki = el("input", { type: "checkbox", value: e.kodea });
+    lauki.addEventListener("change", () => hautaketaLaburtu(edukiontziId, laburpenId));
+    edukiontzia.appendChild(el("label", {}, [lauki, el("span", { testua: e.izena })]));
+  }
+  hautaketaLaburtu(edukiontziId, laburpenId);
+}
+
+function hautaketaLaburtu(edukiontziId, laburpenId) {
+  const izenak = [...document.querySelectorAll(`#${edukiontziId} input:checked`)]
+    .map(i => i.parentElement.querySelector("span").textContent);
+  document.getElementById(laburpenId).textContent =
+    izenak.length ? izenak.join(", ") : "bat ere ez";
+}
+
+function hautatutakoak(edukiontziId) {
+  return [...document.querySelectorAll(`#${edukiontziId} input:checked`)].map(i => i.value);
+}
+
+function hautaketaEzarri(edukiontziId, laburpenId, kodeak) {
+  const multzoa = new Set(kodeak || []);
+  for (const lauki of document.querySelectorAll(`#${edukiontziId} input`)) {
+    lauki.checked = multzoa.has(lauki.value);
+  }
+  hautaketaLaburtu(edukiontziId, laburpenId);
+}
+
 // ─── Nabigazioa ────────────────────────────────────────────────────────────
 
 function atalaErakutsi(izena) {
@@ -258,6 +345,7 @@ function atalaErakutsi(izena) {
   document.getElementById("atal-" + izena).classList.add("ikusgai");
   if (izena === "estatistikak") estatistikakKargatu();
   if (izena === "sinkro") sinkroKargatu();
+  if (izena === "katalogoak") katalogoakErakutsi();
   if (izena === "babeskopiak") kopiakKargatu();
 }
 
@@ -277,6 +365,15 @@ async function hasieratu() {
   aukerak(document.getElementById("ir-jokalaria"), DATUAK.jokalariak, "id", "izena", "Jokalari guztiak");
   aukerak(document.getElementById("ir-fakzioa"), DATUAK.fakzioak, "kodea", "izena", "Fakzio guztiak");
   aukerak(document.getElementById("ir-mapa"), DATUAK.mapak, "kodea", "izena", "Mapa guztiak");
+
+  // Katalogoak berreraikitzean markatuta zeudenak gorde eta berrezarri: bestela
+  // atzeko planoko sinkronizazio batek betetzen ari zaren formularioa hustuko luke.
+  const mertzenarioMarkak = hautatutakoak("f-mertzenarioak");
+  const lekuMarkak = hautatutakoak("f-lekuak");
+  hautaketaBete("f-mertzenarioak", DATUAK.mertzenarioak, "f-mertzenarioak-laburpena");
+  hautaketaBete("f-lekuak", DATUAK.leku_bereziak, "f-lekuak-laburpena");
+  hautaketaEzarri("f-mertzenarioak", "f-mertzenarioak-laburpena", mertzenarioMarkak);
+  hautaketaEzarri("f-lekuak", "f-lekuak-laburpena", lekuMarkak);
 
   const l = DATUAK.laburpena;
   const laburpena = document.getElementById("laburpena");
@@ -326,8 +423,25 @@ async function partidakKargatu() {
         el("td", { klasea: "txiki", testua: j.fakzio_izena || "—" }),
         el("td", { klasea: "zenb", testua: j.puntuak === null ? "—" : String(j.puntuak) }),
         el("td", { klasea: j.irabazlea ? "irabazlea" : "txiki",
-                   testua: j.irabazlea ? "Irabazlea" + (j.garaipen_mota ? ` (${j.garaipen_mota})` : "") : "" }),
+                   testua: j.irabazlea
+                     ? "Irabazlea" + (j.garaipen_mota ? ` (${garaipenIzena(j.garaipen_mota)})` : "")
+                     : "" }),
       ]));
+    }
+
+    const osagarriak = el("div");
+    for (const [aurrizkia, zerrenda] of [
+      ["Mertzenarioak", partida.mertzenarioak || []],
+      ["Lekuak", partida.leku_bereziak || []],
+    ]) {
+      if (!zerrenda.length) continue;
+      const lerroa = el("div", { estiloa: "margin-top:6px" }, [
+        el("span", { klasea: "txiki", testua: aurrizkia + ": " }),
+      ]);
+      for (const x of zerrenda) {
+        lerroa.appendChild(el("span", { klasea: "txipa", testua: x.izena || x.kodea }));
+      }
+      osagarriak.appendChild(lerroa);
     }
     edukiontzia.appendChild(el("div", { klasea: "partida" }, [
       el("header", {}, [
@@ -353,6 +467,7 @@ async function partidakKargatu() {
         ]),
       ]),
       taula,
+      osagarriak,
       partida.oharrak ? el("div", { klasea: "oharra", testua: partida.oharrak }) : null,
     ]));
   }
@@ -382,7 +497,7 @@ function jokalariLerroaGehitu(balioak = null) {
     type: "checkbox", klasea: "j-irabazlea", estiloa: "width:auto;height:18px" });
 
   aukerak(fakzioa, DATUAK.fakzioak, "kodea", "izena", "—");
-  aukerak(mota, DATUAK.garaipen_motak.map(m => ({ k: m, i: m })), "k", "i", "—");
+  aukerak(mota, DATUAK.garaipen_motak, "kodea", "izena", "—");
 
   if (balioak) {
     izena.value = balioak.jokalari_izena || "";
@@ -424,6 +539,8 @@ function formularioaBerrezarri() {
   document.getElementById("f-data").value = new Date().toISOString().slice(0, 10);
   document.getElementById("f-mapa").value = "";
   document.getElementById("f-sorta").value = "";
+  hautaketaEzarri("f-mertzenarioak", "f-mertzenarioak-laburpena", []);
+  hautaketaEzarri("f-lekuak", "f-lekuak-laburpena", []);
   jokalariLerroaGehitu(); jokalariLerroaGehitu();
 }
 
@@ -438,6 +555,10 @@ function partidaEditatu(partida) {
   document.getElementById("f-oharrak").value = partida.oharrak || "";
   document.getElementById("f-jokalariak").textContent = "";
   for (const j of partida.jokalariak) jokalariLerroaGehitu(j);
+  hautaketaEzarri("f-mertzenarioak", "f-mertzenarioak-laburpena",
+                  (partida.mertzenarioak || []).map(x => x.kodea));
+  hautaketaEzarri("f-lekuak", "f-lekuak-laburpena",
+                  (partida.leku_bereziak || []).map(x => x.kodea));
   atalaErakutsi("berria");
   window.scrollTo(0, 0);
 }
@@ -476,6 +597,8 @@ document.getElementById("f-gorde").onclick = async () => {
         karta_sorta: document.getElementById("f-sorta").value || null,
         oharrak: document.getElementById("f-oharrak").value || null,
         jokalariak,
+        mertzenarioak: hautatutakoak("f-mertzenarioak"),
+        leku_bereziak: hautatutakoak("f-lekuak"),
       }),
     });
     formularioaBerrezarri();
@@ -545,6 +668,101 @@ async function estatistikakKargatu() {
         el("td", { klasea: "zenb", testua: String(m.garaipenak) }),
         tasaGelaxka(m.tasa),
       ]));
+
+    const osagarriak = [
+      ...e.mertzenarioak.map(x => ({ ...x, mota: "Mertzenarioa" })),
+      ...e.leku_bereziak.map(x => ({ ...x, mota: "Lekua" })),
+    ].sort((a, b) => b.partidak - a.partidak);
+    taulaBete(document.getElementById("est-osagarriak"),
+      ["Izena", "Mota", "Hedapena", "Partidak"],
+      osagarriak.map(x => [
+        el("td", { testua: x.izena }),
+        el("td", { klasea: "txiki", testua: x.mota }),
+        el("td", { klasea: "txiki", testua: x.hedapena || "—" }),
+        el("td", { klasea: "zenb", testua: String(x.partidak) }),
+      ]));
+  } catch (e) { mezua(e.message, false); }
+}
+
+// ─── Katalogoak ────────────────────────────────────────────────────────────
+
+const KATALOGOAK = [
+  { bidea: "fakzioak", izenburua: "Fakzioak", gakoa: "fakzioak" },
+  { bidea: "mertzenarioak", izenburua: "Mertzenarioak", gakoa: "mertzenarioak" },
+  { bidea: "leku-bereziak", izenburua: "Leku bereziak", gakoa: "leku_bereziak" },
+];
+
+function katalogoakErakutsi() {
+  const edukiontzia = document.getElementById("katalogo-edukia");
+  edukiontzia.textContent = "";
+
+  for (const katalogoa of KATALOGOAK) {
+    const taula = el("table");
+    taulaBete(taula, ["Izena", "Hedapena", "Kodea", ""],
+      (DATUAK[katalogoa.gakoa] || []).map(sarrera => [
+        el("td", { testua: sarrera.izena }),
+        el("td", { klasea: "txiki", testua: sarrera.hedapena || "—" }),
+        el("td", { klasea: "txiki", testua: sarrera.kodea }),
+        el("td", { estiloa: "text-align:right; white-space:nowrap" }, [
+          el("button", {
+            klasea: "botoia isila", estiloa: "padding:2px 9px;font-size:12px",
+            testua: "Izena aldatu",
+            onclick: () => katalogoaGorde(katalogoa, sarrera),
+          }),
+          el("button", {
+            klasea: "botoia isila", estiloa: "padding:2px 9px;font-size:12px;margin-left:5px",
+            testua: "Ezabatu",
+            onclick: () => katalogoaEzabatu(katalogoa, sarrera),
+          }),
+        ]),
+      ]));
+
+    edukiontzia.appendChild(el("div", { estiloa: "margin-bottom:22px" }, [
+      el("h3", { testua: `${katalogoa.izenburua} (${(DATUAK[katalogoa.gakoa] || []).length})` }),
+      el("div", { klasea: "taula-bilgarria" }, [taula]),
+      el("button", {
+        klasea: "botoia isila", estiloa: "margin-top:8px",
+        testua: "+ Berria",
+        onclick: () => katalogoaGorde(katalogoa, null),
+      }),
+    ]));
+  }
+}
+
+async function katalogoaGorde(katalogoa, sarrera) {
+  const izena = prompt(
+    sarrera ? "Izen berria:" : `${katalogoa.izenburua}: izen berria`,
+    sarrera ? sarrera.izena : "");
+  if (!izena) return;
+
+  let kodea = sarrera ? sarrera.kodea : null;
+  if (!kodea) {
+    // Kodea ez da inoiz aldatzen: gertaeretan idatzita geratzen da betiko.
+    kodea = izena.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32);
+    if (!kodea) return mezua("Izen horrek ez du kode baliagarririk ematen.", false);
+  }
+  const hedapena = prompt("Hedapena (aukerakoa):", sarrera ? sarrera.hedapena || "" : "");
+
+  try {
+    await api("/api/katalogoak/" + katalogoa.bidea, {
+      method: "POST",
+      body: JSON.stringify({ kodea, izena, hedapena: hedapena || null }),
+    });
+    mezua("Gordeta.");
+    await hasieratu();
+    katalogoakErakutsi();
+  } catch (e) { mezua(e.message, false); }
+}
+
+async function katalogoaEzabatu(katalogoa, sarrera) {
+  if (!confirm(`"${sarrera.izena}" zerrendatik kendu? Sartutako partidek hor jarraituko dute.`)) return;
+  try {
+    await api(`/api/katalogoak/${katalogoa.bidea}/${encodeURIComponent(sarrera.kodea)}`,
+              { method: "DELETE" });
+    mezua("Kenduta.");
+    await hasieratu();
+    katalogoakErakutsi();
   } catch (e) { mezua(e.message, false); }
 }
 

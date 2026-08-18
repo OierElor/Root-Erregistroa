@@ -14,34 +14,93 @@ ESKEMA_FITX = BASE_DIR / "eskema.sql"
 # sinkronizatu beharrik. Hedapen berri bat atera ahala, aplikaziotik gehi
 # daitezke (orduan bai, gertaera baten bidez sinkronizatuta).
 
+# Izenak jokoan ageri diren bezala daude, ingelesez: kartetan eta arauetan halaxe
+# datoz, eta partida sartzean itzultzen ibili beharrik ez izateko.
+#
+# KODEAK EZ DIRA INOIZ ALDATZEN. Gertaeretan idatzita daude, eta gertaerak
+# aldaezinak dira (sinkronizatuta eta babeskopietan). Izena bakarrik alda daiteke.
+
 FAKZIOAK = [
     # (kodea, izena, hedapena, kolorea)
-    ("marquise",  "Katu Markesa",          "Oinarrizkoa",           "#E8912D"),
-    ("eyrie",     "Arranoen Dinastiak",    "Oinarrizkoa",           "#3B76C4"),
-    ("alliance",  "Basoko Aliantza",       "Oinarrizkoa",           "#4FA65B"),
-    ("vagabond",  "Arlotea",               "Oinarrizkoa",           "#9B9B9B"),
-    ("vagabond2", "Bigarren Arlotea",      "Ibaia eta Lurpea",      "#6E6E6E"),
-    ("cult",      "Musker Kultua",         "Ibaia eta Lurpea",      "#E8D44D"),
-    ("riverfolk", "Ibaitarren Konpainia",  "Ibaia eta Lurpea",      "#43BFC7"),
-    ("duchy",     "Lurpeko Dukerria",      "Lurpeko Dukerria",      "#C4762D"),
-    ("corvid",    "Korbiden Konspirazioa", "Lurpeko Dukerria",      "#7A4FA6"),
-    ("hundreds",  "Ehunen Jauna",          "Erbesteratuak",         "#C43B3B"),
-    ("keepers",   "Burdinazko Zaindariak", "Erbesteratuak",         "#8C9EA6"),
+    ("marquise",  "Marquise de Cat",      "Root",                    "#E8912D"),
+    ("eyrie",     "Eyrie Dynasties",      "Root",                    "#3B76C4"),
+    ("alliance",  "Woodland Alliance",    "Root",                    "#4FA65B"),
+    ("vagabond",  "Vagabond",             "Root",                    "#9B9B9B"),
+    ("vagabond2", "Vagabond (2nd)",       "The Riverfolk Expansion", "#6E6E6E"),
+    ("cult",      "Lizard Cult",          "The Riverfolk Expansion", "#E8D44D"),
+    ("riverfolk", "Riverfolk Company",    "The Riverfolk Expansion", "#43BFC7"),
+    ("duchy",     "Underground Duchy",    "The Underworld Expansion", "#C4762D"),
+    ("corvid",    "Corvid Conspiracy",    "The Underworld Expansion", "#7A4FA6"),
+    ("hundreds",  "Lord of the Hundreds", "The Marauder Expansion",  "#C43B3B"),
+    ("keepers",   "Keepers in Iron",      "The Marauder Expansion",  "#8C9EA6"),
 ]
 
 MAPAK = [
-    ("udazkena", "Udazkena"),
-    ("negua",    "Negua"),
-    ("aintzira", "Aintzira"),
-    ("mendia",   "Mendia"),
+    ("udazkena", "Autumn"),
+    ("negua",    "Winter"),
+    ("aintzira", "Lake"),
+    ("mendia",   "Mountain"),
 ]
 
 KARTA_SORTAK = [
-    ("estandarra",   "Estandarra"),
-    ("erbesteratuak", "Erbesteratuak eta Partisanoak"),
+    ("estandarra",    "Standard Deck"),
+    ("erbesteratuak", "Exiles and Partisans Deck"),
 ]
 
-GARAIPEN_MOTAK = ("puntuak", "nagusitasuna", "koalizioa", "berezia")
+# Mertzenarioak (Hirelings). Karta bakoitzak izen propioa du sustatuta (promoted)
+# edo jaitsita (demoted) dagoenaren arabera, beraz izena hautatzeak dena esaten du:
+# ez da alde bat markatzeko eremurik behar. Bikoteka daude zerrendatuta.
+MERTZENARIOAK = [
+    # (kodea, izena, hedapena)
+    ("forest-patrol",     "Forest Patrol",     "The Marauder Expansion"),
+    ("feline-physicians", "Feline Physicians", "The Marauder Expansion"),
+    ("last-dynasty",      "Last Dynasty",      "The Marauder Expansion"),
+    ("bluebird-nobles",   "Bluebird Nobles",   "The Marauder Expansion"),
+    ("spring-uprising",   "Spring Uprising",   "The Marauder Expansion"),
+    ("rabbit-scouts",     "Rabbit Scouts",     "The Marauder Expansion"),
+    ("the-exile",         "The Exile",         "The Marauder Expansion"),
+    ("the-brigand",       "The Brigand",       "The Marauder Expansion"),
+
+    ("riverfolk-flotilla", "Riverfolk Flotilla", "Riverfolk Hirelings Pack"),
+    ("otter-divers",       "Otter Divers",       "Riverfolk Hirelings Pack"),
+    ("warm-sun-prophets",  "Warm Sun Prophets",  "Riverfolk Hirelings Pack"),
+    ("lizard-envoys",      "Lizard Envoys",      "Riverfolk Hirelings Pack"),
+    ("highway-bandits",    "Highway Bandits",    "Riverfolk Hirelings Pack"),
+    ("bandit-gangs",       "Bandit Gangs",       "Riverfolk Hirelings Pack"),
+
+    ("sunward-expedition", "Sunward Expedition", "Underworld Hirelings Pack"),
+    ("mole-artisans",      "Mole Artisans",      "Underworld Hirelings Pack"),
+    ("furious-protector",  "Furious Protector",  "Underworld Hirelings Pack"),
+    ("stoic-protector",    "Stoic Protector",    "Underworld Hirelings Pack"),
+    ("corvid-spies",       "Corvid Spies",       "Underworld Hirelings Pack"),
+    ("raven-sentinels",    "Raven Sentinels",    "Underworld Hirelings Pack"),
+
+    ("flame-bearers",      "Flame Bearers",      "Marauder Hirelings Pack"),
+    ("rat-smugglers",      "Rat Smugglers",      "Marauder Hirelings Pack"),
+    ("street-band",        "Street Band",        "Marauder Hirelings Pack"),
+    ("popular-band",       "Popular Band",       "Marauder Hirelings Pack"),
+    ("vault-keepers",      "Vault Keepers",      "Marauder Hirelings Pack"),
+    ("badger-bodyguards",  "Badger Bodyguards",  "Marauder Hirelings Pack"),
+]
+
+# Leku bereziak (Landmarks).
+LEKU_BEREZIAK = [
+    ("tower",           "The Tower",           "The Underworld Expansion"),
+    ("ferry",           "The Ferry",           "The Underworld Expansion"),
+    ("black-market",    "The Black Market",    "Landmark Pack"),
+    ("lost-city",       "The Lost City",       "Landmark Pack"),
+    ("legendary-forge", "The Legendary Forge", "Landmark Pack"),
+    ("elder-treetop",   "The Elder Treetop",   "Landmark Pack"),
+]
+
+# Kodea gertaeretan gordetzen da; etiketa ikusteko bakarrik da.
+GARAIPEN_MOTAK = [
+    ("puntuak",      "Points"),
+    ("nagusitasuna", "Dominance"),
+    ("koalizioa",    "Coalition"),
+    ("berezia",      "Other"),
+]
+GARAIPEN_KODEAK = tuple(kodea for kodea, _ in GARAIPEN_MOTAK)
 
 BEHARREZKO_TAULAK = {"gertaerak", "partidak", "partida_jokalariak", "jokalariak", "meta"}
 
@@ -62,25 +121,56 @@ def hasieratu(bidea: Path | str | None = None) -> None:
     Path(bidea or DB_FITX).parent.mkdir(parents=True, exist_ok=True)
     konn = konexioa(bidea)
     try:
-        konn.executescript(ESKEMA_FITX.read_text(encoding="utf-8"))
-        konn.executemany(
-            "INSERT OR IGNORE INTO fakzioak (kodea, izena, hedapena, kolorea) "
-            "VALUES (?,?,?,?)",
-            FAKZIOAK,
-        )
-        konn.executemany(
-            "INSERT OR IGNORE INTO mapak (kodea, izena) VALUES (?,?)", MAPAK
-        )
-        konn.executemany(
-            "INSERT OR IGNORE INTO karta_sortak (kodea, izena) VALUES (?,?)",
-            KARTA_SORTAK,
-        )
-        konn.execute(
-            "INSERT OR IGNORE INTO meta (gakoa, balioa) VALUES ('lamport', '0')"
-        )
+        eskema_ezarri(konn)
         konn.commit()
     finally:
         konn.close()
+
+
+def eskema_ezarri(konn: sqlite3.Connection) -> None:
+    """Eskema eta hazi-datuak konexio ireki baten gainean ezarri.
+
+    Idempotentea. `hasieratu`-k erabiltzen du, eta baita babeskopia bat
+    leheneratu ondoren ere: kopia zaharrago batek taula berriak falta izan
+    ditzake, eta hemen osatzen dira.
+    """
+    konn.executescript(ESKEMA_FITX.read_text(encoding="utf-8"))
+
+    # Izenak abio bakoitzean freskatzen dira, hazi-datuak aldatzen direnean
+    # lehendik dagoen datu-basea ere eguneratu dadin (adib. euskarazko izenetatik
+    # ingelesezko ofizialetara). Baina EZ dira berridazten erabiltzaileak
+    # katalogotik eskuz aldatu dituenean: hori gertaera batek markatzen du,
+    # `azken_lamport > 0` utziz.
+    konn.executemany(
+        "INSERT INTO fakzioak (kodea, izena, hedapena, kolorea) VALUES (?,?,?,?) "
+        "ON CONFLICT(kodea) DO UPDATE SET izena = excluded.izena, "
+        "hedapena = excluded.hedapena, kolorea = excluded.kolorea "
+        "WHERE fakzioak.azken_lamport = 0",
+        FAKZIOAK,
+    )
+    konn.executemany(
+        "INSERT INTO mertzenarioak (kodea, izena, hedapena) VALUES (?,?,?) "
+        "ON CONFLICT(kodea) DO UPDATE SET izena = excluded.izena, "
+        "hedapena = excluded.hedapena WHERE mertzenarioak.azken_lamport = 0",
+        MERTZENARIOAK,
+    )
+    konn.executemany(
+        "INSERT INTO leku_bereziak (kodea, izena, hedapena) VALUES (?,?,?) "
+        "ON CONFLICT(kodea) DO UPDATE SET izena = excluded.izena, "
+        "hedapena = excluded.hedapena WHERE leku_bereziak.azken_lamport = 0",
+        LEKU_BEREZIAK,
+    )
+    konn.executemany(
+        "INSERT INTO mapak (kodea, izena) VALUES (?,?) "
+        "ON CONFLICT(kodea) DO UPDATE SET izena = excluded.izena",
+        MAPAK,
+    )
+    konn.executemany(
+        "INSERT INTO karta_sortak (kodea, izena) VALUES (?,?) "
+        "ON CONFLICT(kodea) DO UPDATE SET izena = excluded.izena",
+        KARTA_SORTAK,
+    )
+    konn.execute("INSERT OR IGNORE INTO meta (gakoa, balioa) VALUES ('lamport', '0')")
 
 
 def meta_irakurri(konn: sqlite3.Connection, gakoa: str, lehenetsia: str = "") -> str:

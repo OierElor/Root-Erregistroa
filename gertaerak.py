@@ -32,13 +32,16 @@ import konfig
 # balidatzen dira: eremu ezezagunak, mota okerrak eta neurriz kanpoko balioak
 # baztertu egiten dira, datu-basera iritsi baino lehen.
 
-ID_ERED = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+# `:` katalogoen aurrizkietarako da (`mertzenarioa:tower`); ikus MOTAK behean.
+ID_ERED = re.compile(r"^[A-Za-z0-9_:-]{1,64}$")
 DATA_ERED = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 KODE_ERED = re.compile(r"^[a-z0-9_-]{1,32}$")
 
 GEHIENEZ_JOKALARI = 12
 GEHIENEZ_PUNTU = 999
 GEHIENEZ_LAMPORT = 2**53
+GEHIENEZ_MERTZENARIO = 20
+GEHIENEZ_LEKU = 10
 
 
 class GertaeraErrorea(ValueError):
@@ -116,7 +119,7 @@ def _balidatu_partida_gorde(karga: dict) -> dict:
         ikusitakoak.add(jokalari_id)
 
         mota = sarrera.get("garaipen_mota")
-        if mota not in (None, "", *db.GARAIPEN_MOTAK):
+        if mota not in (None, "", *db.GARAIPEN_KODEAK):
             raise GertaeraErrorea(f"jokalariak[{i}].garaipen_mota: ezezaguna")
 
         parte_hartzaileak.append(
@@ -148,16 +151,51 @@ def _balidatu_partida_gorde(karga: dict) -> dict:
         "karta_sorta": _kodea(karga.get("karta_sorta"), "partida.karta_sorta", True),
         "oharrak": _testua(karga.get("oharrak"), "partida.oharrak", 2000, True),
         "jokalariak": parte_hartzaileak,
+        # Aukerakoak: eremu hauek gabeko gertaera zaharrak baliozkoak dira.
+        "mertzenarioak": _kode_zerrenda(
+            karga.get("mertzenarioak"), "partida.mertzenarioak", GEHIENEZ_MERTZENARIO
+        ),
+        "leku_bereziak": _kode_zerrenda(
+            karga.get("leku_bereziak"), "partida.leku_bereziak", GEHIENEZ_LEKU
+        ),
     }
 
 
-def _balidatu_fakzioa_gorde(karga: dict) -> dict:
-    return {
-        "kodea": _kodea(karga.get("kodea"), "fakzioa.kodea"),
-        "izena": _testua(karga.get("izena"), "fakzioa.izena", 60),
-        "hedapena": _testua(karga.get("hedapena"), "fakzioa.hedapena", 60, True),
-        "kolorea": _testua(karga.get("kolorea"), "fakzioa.kolorea", 9, True),
-    }
+def _kode_zerrenda(balioa, izena, gehienez) -> list:
+    """Kode zerrenda bat balidatu: bikoizturik gabe, ordena egonkorrean."""
+    if balioa is None:
+        return []
+    if not isinstance(balioa, list):
+        raise GertaeraErrorea(f"{izena}: zerrenda izan behar du")
+    if len(balioa) > gehienez:
+        raise GertaeraErrorea(f"{izena}: elementu gehiegi")
+
+    emaitza, ikusitakoak = [], set()
+    for i, kodea in enumerate(balioa):
+        kodea = _kodea(kodea, f"{izena}[{i}]")
+        if kodea in ikusitakoak:
+            raise GertaeraErrorea(f"{izena}: {kodea!r} errepikatuta")
+        ikusitakoak.add(kodea)
+        emaitza.append(kodea)
+    return emaitza
+
+
+def _balidatu_katalogoa(mota_izena, kolorea_du=False):
+    """Katalogo baten sarrera (fakzioa, mertzenarioa, lekua): egitura bera dute."""
+
+    def balidatzailea(karga: dict) -> dict:
+        emaitza = {
+            "kodea": _kodea(karga.get("kodea"), f"{mota_izena}.kodea"),
+            "izena": _testua(karga.get("izena"), f"{mota_izena}.izena", 60),
+            "hedapena": _testua(karga.get("hedapena"), f"{mota_izena}.hedapena", 60, True),
+        }
+        if kolorea_du:
+            emaitza["kolorea"] = _testua(
+                karga.get("kolorea"), f"{mota_izena}.kolorea", 9, True
+            )
+        return emaitza
+
+    return balidatzailea
 
 
 def _balidatu_ezabatu(eremua):
@@ -167,15 +205,28 @@ def _balidatu_ezabatu(eremua):
     return balidatzailea
 
 
-# mota → (balidatzailea, entitatearen identifikatzailea kargan)
+# mota → (balidatzailea, id-a kargan, entitate_id-aren aurrizkia)
+#
+# Aurrizkiak katalogoen arteko talkak saihesten ditu: `entitate_id` globala da
+# erregistro osoan, eta mertzenario batek eta leku batek kode bera izan lezakete.
+# Lehendik dauden motek aurrizkirik gabe jarraitzen dute, datu zaharrek balio dezaten.
 MOTAK = {
-    "jokalaria_gorde":   (_balidatu_jokalaria_gorde, "id"),
-    "jokalaria_ezabatu": (_balidatu_ezabatu("id"), "id"),
-    "partida_gorde":     (_balidatu_partida_gorde, "id"),
-    "partida_ezabatu":   (_balidatu_ezabatu("id"), "id"),
-    "fakzioa_gorde":     (_balidatu_fakzioa_gorde, "kodea"),
-    "fakzioa_ezabatu":   (_balidatu_ezabatu("kodea"), "kodea"),
+    "jokalaria_gorde":     (_balidatu_jokalaria_gorde, "id", ""),
+    "jokalaria_ezabatu":   (_balidatu_ezabatu("id"), "id", ""),
+    "partida_gorde":       (_balidatu_partida_gorde, "id", ""),
+    "partida_ezabatu":     (_balidatu_ezabatu("id"), "id", ""),
+    "fakzioa_gorde":       (_balidatu_katalogoa("fakzioa", kolorea_du=True), "kodea", ""),
+    "fakzioa_ezabatu":     (_balidatu_ezabatu("kodea"), "kodea", ""),
+    "mertzenarioa_gorde":  (_balidatu_katalogoa("mertzenarioa"), "kodea", "mertzenarioa:"),
+    "mertzenarioa_ezabatu": (_balidatu_ezabatu("kodea"), "kodea", "mertzenarioa:"),
+    "lekua_gorde":         (_balidatu_katalogoa("lekua"), "kodea", "lekua:"),
+    "lekua_ezabatu":       (_balidatu_ezabatu("kodea"), "kodea", "lekua:"),
 }
+
+
+def entitate_id_sortu(mota: str, karga: dict) -> str:
+    _, id_eremua, aurrizkia = MOTAK[mota]
+    return aurrizkia + karga[id_eremua]
 
 
 def karga_balidatu(mota: str, karga: dict) -> dict:
@@ -183,7 +234,7 @@ def karga_balidatu(mota: str, karga: dict) -> dict:
         raise GertaeraErrorea(f"gertaera mota ezezaguna: {mota!r}")
     if not isinstance(karga, dict):
         raise GertaeraErrorea("karga: objektua izan behar du")
-    balidatzailea, _ = MOTAK[mota]
+    balidatzailea = MOTAK[mota][0]
     return balidatzailea(karga)
 
 
@@ -194,10 +245,9 @@ def gertaera_balidatu(gertaera: dict) -> dict:
 
     mota = _testua(gertaera.get("mota"), "mota", 40)
     karga = karga_balidatu(mota, gertaera.get("karga"))
-    _, id_eremua = MOTAK[mota]
 
     entitate_id = _id(gertaera.get("entitate_id"), "entitate_id")
-    if entitate_id != karga[id_eremua]:
+    if entitate_id != entitate_id_sortu(mota, karga):
         raise GertaeraErrorea("entitate_id ez dator bat kargarekin")
 
     return {
@@ -272,7 +322,12 @@ def entitatea_berreraiki(konn: sqlite3.Connection, entitate_id: str) -> None:
     if not lerroak:
         return
 
-    konn.execute("DELETE FROM partida_jokalariak WHERE partida_id = ?", (entitate_id,))
+    for taula, zutabea in (
+        ("partida_jokalariak", "partida_id"),
+        ("partida_mertzenarioak", "partida_id"),
+        ("partida_lekuak", "partida_id"),
+    ):
+        konn.execute(f"DELETE FROM {taula} WHERE {zutabea} = ?", (entitate_id,))
 
     egoera = None
     mota_azkena = None
@@ -324,6 +379,14 @@ def entitatea_berreraiki(konn: sqlite3.Connection, entitate_id: str) -> None:
                 for p in egoera["jokalariak"]
             ],
         )
+        konn.executemany(
+            "INSERT INTO partida_mertzenarioak (partida_id, mertzenario_kodea) VALUES (?,?)",
+            [(egoera["id"], k) for k in egoera.get("mertzenarioak") or []],
+        )
+        konn.executemany(
+            "INSERT INTO partida_lekuak (partida_id, leku_kodea) VALUES (?,?)",
+            [(egoera["id"], k) for k in egoera.get("leku_bereziak") or []],
+        )
     elif mota_azkena == "fakzioa_gorde":
         konn.execute(
             "INSERT INTO fakzioak (kodea, izena, hedapena, kolorea, ezabatuta, "
@@ -335,6 +398,17 @@ def entitatea_berreraiki(konn: sqlite3.Connection, entitate_id: str) -> None:
             (egoera["kodea"], egoera["izena"], egoera["hedapena"], egoera["kolorea"],
              ezabatuta, azken_lamport, azken_gailua),
         )
+    elif mota_azkena in ("mertzenarioa_gorde", "lekua_gorde"):
+        taula = "mertzenarioak" if mota_azkena == "mertzenarioa_gorde" else "leku_bereziak"
+        konn.execute(
+            f"INSERT INTO {taula} (kodea, izena, hedapena, ezabatuta, "
+            "azken_lamport, azken_gailua) VALUES (?,?,?,?,?,?) "
+            "ON CONFLICT(kodea) DO UPDATE SET izena=excluded.izena, "
+            "hedapena=excluded.hedapena, ezabatuta=excluded.ezabatuta, "
+            "azken_lamport=excluded.azken_lamport, azken_gailua=excluded.azken_gailua",
+            (egoera["kodea"], egoera["izena"], egoera["hedapena"], ezabatuta,
+             azken_lamport, azken_gailua),
+        )
 
 
 def birsortu(konn: sqlite3.Connection) -> int:
@@ -344,10 +418,15 @@ def birsortu(konn: sqlite3.Connection) -> int:
     baina konponketarako eta testetarako funtsezkoa da: emaitzak berdina izan
     behar du beti.
     """
-    konn.execute("DELETE FROM partida_jokalariak")
-    konn.execute("DELETE FROM partidak")
-    konn.execute("DELETE FROM jokalariak")
-    konn.execute("UPDATE fakzioak SET ezabatuta = 0, azken_lamport = 0, azken_gailua = ''")
+    for taula in ("partida_jokalariak", "partida_mertzenarioak", "partida_lekuak",
+                  "partidak", "jokalariak"):
+        konn.execute(f"DELETE FROM {taula}")
+    # Katalogoetan lerroak ez dira ezabatzen (hazi-datuak dira); markak bakarrik
+    # berrezartzen dira, gero gertaerek berriro ezarri ditzaten.
+    for taula in ("fakzioak", "mertzenarioak", "leku_bereziak"):
+        konn.execute(
+            f"UPDATE {taula} SET ezabatuta = 0, azken_lamport = 0, azken_gailua = ''"
+        )
 
     idak = [
         l[0] for l in konn.execute("SELECT DISTINCT entitate_id FROM gertaerak")
@@ -364,7 +443,6 @@ def birsortu(konn: sqlite3.Connection) -> int:
 def gertaera_berria(konn: sqlite3.Connection, mota: str, karga: dict) -> dict:
     """Gailu honetan gertaera berri bat sortu, gorde eta aplikatu."""
     karga = karga_balidatu(mota, karga)
-    _, id_eremua = MOTAK[mota]
 
     gertaera = {
         "gertaera_id": uuid.uuid4().hex,
@@ -372,7 +450,7 @@ def gertaera_berria(konn: sqlite3.Connection, mota: str, karga: dict) -> dict:
         "lamport": _lamport_hurrengoa(konn),
         "unix_ordua": int(time.time()),
         "mota": mota,
-        "entitate_id": karga[id_eremua],
+        "entitate_id": entitate_id_sortu(mota, karga),
         "karga": karga,
         "sinadura": None,
     }

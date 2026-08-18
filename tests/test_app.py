@@ -145,6 +145,93 @@ def test_partida_id_baliogabea_baztertu(bezeroa):
     assert erantzuna.status_code == 400
 
 
+# ─── Mertzenarioak eta leku bereziak ────────────────────────────────────────
+
+
+def test_mertzenarioekin_eta_lekuekin_gorde(bezeroa):
+    eskaera(bezeroa, "post", "/api/partidak", partida_datuak(
+        mertzenarioak=["forest-patrol", "flame-bearers"],
+        leku_bereziak=["tower", "lost-city"],
+    ))
+
+    p = partidak(bezeroa)[0]
+    assert {m["izena"] for m in p["mertzenarioak"]} == {"Forest Patrol", "Flame Bearers"}
+    assert {l["izena"] for l in p["leku_bereziak"]} == {"The Tower", "The Lost City"}
+
+
+def test_editatzeak_mertzenarioak_eguneratzen_ditu(bezeroa):
+    partida_id = eskaera(bezeroa, "post", "/api/partidak", partida_datuak(
+        mertzenarioak=["forest-patrol", "flame-bearers"], leku_bereziak=["tower"],
+    )).get_json()["id"]
+
+    eskaera(bezeroa, "post", "/api/partidak", partida_datuak(
+        id=partida_id, mertzenarioak=["mole-artisans"], leku_bereziak=[],
+    ))
+
+    p = partidak(bezeroa)[0]
+    assert [m["izena"] for m in p["mertzenarioak"]] == ["Mole Artisans"]
+    assert p["leku_bereziak"] == []
+
+
+def test_katalogoak_hasieran_datoz(bezeroa):
+    hasiera = eskaera(bezeroa, "get", "/api/hasiera").get_json()
+    assert len(hasiera["mertzenarioak"]) == 26
+    assert len(hasiera["leku_bereziak"]) == 6
+    assert {"kodea": "puntuak", "izena": "Points"} in hasiera["garaipen_motak"]
+    fakzioak = {f["kodea"]: f["izena"] for f in hasiera["fakzioak"]}
+    assert fakzioak["marquise"] == "Marquise de Cat"
+
+
+def test_izen_ofizialak_ingelesez(bezeroa):
+    hasiera = eskaera(bezeroa, "get", "/api/hasiera").get_json()
+    assert {m["izena"] for m in hasiera["mapak"]} == {"Autumn", "Winter", "Lake", "Mountain"}
+    izenak = {f["izena"] for f in hasiera["fakzioak"]}
+    assert {"Marquise de Cat", "Eyrie Dynasties", "Woodland Alliance",
+            "Lord of the Hundreds", "Keepers in Iron"} <= izenak
+
+
+def test_erabilera_estatistiketan_agertzen_da(bezeroa):
+    eskaera(bezeroa, "post", "/api/partidak", partida_datuak(
+        mertzenarioak=["forest-patrol"], leku_bereziak=["tower"]))
+    eskaera(bezeroa, "post", "/api/partidak", partida_datuak(
+        data="2026-05-02", mertzenarioak=["forest-patrol"]))
+
+    est = eskaera(bezeroa, "get", "/api/estatistikak").get_json()
+    erabilienak = {m["izena"]: m["partidak"] for m in est["mertzenarioak"]}
+    assert erabilienak["Forest Patrol"] == 2
+    assert [l["izena"] for l in est["leku_bereziak"]] == ["The Tower"]
+
+
+# ─── Katalogoen edizioa ─────────────────────────────────────────────────────
+
+
+def test_katalogoko_izena_aldatu(bezeroa):
+    erantzuna = eskaera(bezeroa, "post", "/api/katalogoak/mertzenarioak",
+                        {"kodea": "forest-patrol", "izena": "Forest Patrol (zuzendua)"})
+    assert erantzuna.status_code == 200
+
+    hasiera = eskaera(bezeroa, "get", "/api/hasiera").get_json()
+    izenak = {m["kodea"]: m["izena"] for m in hasiera["mertzenarioak"]}
+    assert izenak["forest-patrol"] == "Forest Patrol (zuzendua)"
+
+
+def test_katalogoan_berria_gehitu_eta_kendu(bezeroa):
+    eskaera(bezeroa, "post", "/api/katalogoak/leku-bereziak",
+            {"kodea": "nire-lekua", "izena": "The Homeland", "hedapena": "Homeland"})
+    hasiera = eskaera(bezeroa, "get", "/api/hasiera").get_json()
+    assert "nire-lekua" in {l["kodea"] for l in hasiera["leku_bereziak"]}
+
+    eskaera(bezeroa, "delete", "/api/katalogoak/leku-bereziak/nire-lekua")
+    hasiera = eskaera(bezeroa, "get", "/api/hasiera").get_json()
+    assert "nire-lekua" not in {l["kodea"] for l in hasiera["leku_bereziak"]}
+
+
+def test_katalogo_ezezaguna_baztertu(bezeroa):
+    erantzuna = eskaera(bezeroa, "post", "/api/katalogoak/jokalariak",
+                        {"kodea": "x", "izena": "X"})
+    assert erantzuna.status_code == 400
+
+
 # ─── Segurtasun-geruza ──────────────────────────────────────────────────────
 
 

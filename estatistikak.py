@@ -152,8 +152,49 @@ def azken_partidak(konn: sqlite3.Connection, muga: int = 50, iragazkia: dict | N
         ).fetchall()
         partida = dict(p)
         partida["jokalariak"] = [dict(x) for x in parte_hartzaileak]
+        partida["mertzenarioak"] = [
+            dict(x) for x in konn.execute(
+                "SELECT pm.mertzenario_kodea AS kodea, m.izena "
+                "FROM partida_mertzenarioak pm "
+                "LEFT JOIN mertzenarioak m ON m.kodea = pm.mertzenario_kodea "
+                "WHERE pm.partida_id = ? ORDER BY m.izena",
+                (p["id"],),
+            )
+        ]
+        partida["leku_bereziak"] = [
+            dict(x) for x in konn.execute(
+                "SELECT pl.leku_kodea AS kodea, l.izena "
+                "FROM partida_lekuak pl "
+                "LEFT JOIN leku_bereziak l ON l.kodea = pl.leku_kodea "
+                "WHERE pl.partida_id = ? ORDER BY l.izena",
+                (p["id"],),
+            )
+        ]
         emaitza.append(partida)
     return emaitza
+
+
+def osagarrien_erabilera(konn: sqlite3.Connection) -> dict:
+    """Zein mertzenario eta leku berezi erabiltzen diren gehien."""
+    def kontatu(lotura_taula, kode_zutabea, katalogoa):
+        return [
+            dict(l) for l in konn.execute(
+                f"""
+                SELECT k.kodea, k.izena, k.hedapena, COUNT(*) AS partidak
+                FROM {lotura_taula} lt
+                JOIN partidak p ON p.id = lt.partida_id
+                JOIN {katalogoa} k ON k.kodea = lt.{kode_zutabea}
+                WHERE p.ezabatuta = 0
+                GROUP BY k.kodea
+                ORDER BY partidak DESC, k.izena
+                """
+            )
+        ]
+
+    return {
+        "mertzenarioak": kontatu("partida_mertzenarioak", "mertzenario_kodea", "mertzenarioak"),
+        "leku_bereziak": kontatu("partida_lekuak", "leku_kodea", "leku_bereziak"),
+    }
 
 
 def _tasarekin(lerroa: dict, zenbakitzailea: str, izendatzailea: str) -> dict:

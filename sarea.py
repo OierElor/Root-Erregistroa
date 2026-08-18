@@ -35,6 +35,10 @@ AURKIKUNTZA_PORTUA = int(os.environ.get("AURKIKUNTZA_PORTUA", "47777"))
 SYNC_PORTUA = konfig.SYNC_PORTUA
 
 SEINALE_TARTEA = 5          # segundo
+# Abioan maizago: bestela aplikazioa piztu eta berehala "sinkronizatu" sakatuz
+# gero, oraindik ez litzateke kiderik ezagutuko eta ez luke ezer egingo.
+HASIERAKO_TARTEA = 1
+HASIERAKO_SEINALEAK = 10
 SINKRO_TARTEA = 20          # segundo
 KIDE_IRAUNGITZEA = 60       # segundo seinalerik gabe → kidea ahaztu
 ESKAERA_MUGA = 30           # eskaera minutuko IP bakoitzeko
@@ -215,11 +219,12 @@ def _aurkikuntza_haria(gelditu: threading.Event) -> None:
         print(f"[sarea] Aurkikuntza ezin da abiarazi: {e}")
         return
 
-    azkena = 0.0
+    azkena, bidalitakoak = 0.0, 0
     while not gelditu.is_set():
-        if time.time() - azkena > SEINALE_TARTEA:
+        tartea = HASIERAKO_TARTEA if bidalitakoak < HASIERAKO_SEINALEAK else SEINALE_TARTEA
+        if time.time() - azkena >= tartea:
             _seinalea_bidali(hargailua)
-            azkena = time.time()
+            azkena, bidalitakoak = time.time(), bidalitakoak + 1
         try:
             datuak, helbidea = hargailua.recvfrom(GEHIENEZ_SEINALEA + 1)
             _seinalea_prozesatu(datuak, helbidea)

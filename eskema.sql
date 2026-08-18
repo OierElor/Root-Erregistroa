@@ -71,6 +71,23 @@ CREATE TABLE IF NOT EXISTS partida_jokalariak (
 CREATE INDEX IF NOT EXISTS idx_pj_jokalaria ON partida_jokalariak (jokalari_id);
 CREATE INDEX IF NOT EXISTS idx_pj_fakzioa   ON partida_jokalariak (fakzio_kodea);
 
+-- Partidan erabilitako mertzenarioak eta leku bereziak. Jokalariak bezala,
+-- partidaren mendekoak dira erabat: partida gordetzean osorik ordezkatzen dira.
+CREATE TABLE IF NOT EXISTS partida_mertzenarioak (
+    partida_id        TEXT NOT NULL REFERENCES partidak(id) ON DELETE CASCADE,
+    mertzenario_kodea TEXT NOT NULL,
+    PRIMARY KEY (partida_id, mertzenario_kodea)
+);
+
+CREATE TABLE IF NOT EXISTS partida_lekuak (
+    partida_id TEXT NOT NULL REFERENCES partidak(id) ON DELETE CASCADE,
+    leku_kodea TEXT NOT NULL,
+    PRIMARY KEY (partida_id, leku_kodea)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pm_mertzenarioa ON partida_mertzenarioak (mertzenario_kodea);
+CREATE INDEX IF NOT EXISTS idx_pl_lekua        ON partida_lekuak (leku_kodea);
+
 -- ─── Katalogoak ─────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS fakzioak (
@@ -78,6 +95,26 @@ CREATE TABLE IF NOT EXISTS fakzioak (
     izena         TEXT NOT NULL,
     hedapena      TEXT,
     kolorea       TEXT,
+    ezabatuta     INTEGER NOT NULL DEFAULT 0,
+    azken_lamport INTEGER NOT NULL DEFAULT 0,
+    azken_gailua  TEXT NOT NULL DEFAULT ''
+);
+
+-- Mertzenarioak (Hirelings) eta leku bereziak (Landmarks): fakzioen egitura bera,
+-- katalogotik editatu ahal izateko (hedapen berriak, izen zuzenketak).
+CREATE TABLE IF NOT EXISTS mertzenarioak (
+    kodea         TEXT PRIMARY KEY,
+    izena         TEXT NOT NULL,
+    hedapena      TEXT,
+    ezabatuta     INTEGER NOT NULL DEFAULT 0,
+    azken_lamport INTEGER NOT NULL DEFAULT 0,
+    azken_gailua  TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS leku_bereziak (
+    kodea         TEXT PRIMARY KEY,
+    izena         TEXT NOT NULL,
+    hedapena      TEXT,
     ezabatuta     INTEGER NOT NULL DEFAULT 0,
     azken_lamport INTEGER NOT NULL DEFAULT 0,
     azken_gailua  TEXT NOT NULL DEFAULT ''
