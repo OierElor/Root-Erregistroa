@@ -141,10 +141,11 @@ def azken_partidak(konn: sqlite3.Connection, muga: int = 50, iragazkia: dict | N
         parte_hartzaileak = konn.execute(
             """
             SELECT pj.*, j.izena AS jokalari_izena, f.izena AS fakzio_izena,
-                   f.kolorea AS fakzio_kolorea
+                   f.kolorea AS fakzio_kolorea, a.izena AS arlote_izena
             FROM partida_jokalariak pj
             LEFT JOIN jokalariak j ON j.id = pj.jokalari_id
             LEFT JOIN fakzioak   f ON f.kodea = pj.fakzio_kodea
+            LEFT JOIN arloteak   a ON a.kodea = pj.arlote_kodea
             WHERE pj.partida_id = ?
             ORDER BY pj.irabazlea DESC, pj.puntuak DESC
             """,
@@ -195,6 +196,25 @@ def osagarrien_erabilera(konn: sqlite3.Connection) -> dict:
         "mertzenarioak": kontatu("partida_mertzenarioak", "mertzenario_kodea", "mertzenarioak"),
         "leku_bereziak": kontatu("partida_lekuak", "leku_kodea", "leku_bereziak"),
     }
+
+
+def arloteen_estatistikak(konn: sqlite3.Connection) -> list:
+    """Vagabond pertsonaia bakoitzarekin nola joan den."""
+    lerroak = konn.execute(
+        """
+        SELECT a.kodea, a.izena, a.hedapena,
+               COUNT(*)                  AS partidak,
+               SUM(pj.irabazlea)         AS garaipenak,
+               ROUND(AVG(pj.puntuak), 1) AS batez_beste
+        FROM partida_jokalariak pj
+        JOIN partidak p ON p.id = pj.partida_id
+        JOIN arloteak a ON a.kodea = pj.arlote_kodea
+        WHERE p.ezabatuta = 0
+        GROUP BY a.kodea
+        ORDER BY garaipenak DESC, partidak DESC, a.izena
+        """
+    ).fetchall()
+    return [_tasarekin(dict(l), "garaipenak", "partidak") for l in lerroak]
 
 
 def _tasarekin(lerroa: dict, zenbakitzailea: str, izendatzailea: str) -> dict:

@@ -168,6 +168,10 @@
       <div class="taula-bilgarria"><table id="est-matrizea"></table></div>
     </div>
     <div class="txartela">
+      <h2>Vagabond pertsonaiak</h2>
+      <div class="taula-bilgarria"><table id="est-arloteak"></table></div>
+    </div>
+    <div class="txartela">
       <h2>Mertzenario eta leku erabilienak</h2>
       <div class="taula-bilgarria"><table id="est-osagarriak"></table></div>
     </div>
@@ -240,7 +244,7 @@
 const TOKENA = "__SAIO_TOKENA__";
 let DATUAK = {
   jokalariak: [], fakzioak: [], mapak: [], karta_sortak: [], garaipen_motak: [],
-  mertzenarioak: [], leku_bereziak: [],
+  mertzenarioak: [], leku_bereziak: [], arloteak: [],
 };
 // Partida bat editatzen ari bagara, haren identifikatzailea. Gordetzean id hori
 // bidaltzeak partida ordezkatzen du, berri bat sortu beharrean.
@@ -420,7 +424,8 @@ async function partidakKargatu() {
           el("span", { klasea: "fakzio-punto", estiloa: `background:${j.fakzio_kolorea || "#666"}` }),
           el("span", { testua: j.jokalari_izena || "?" }),
         ]),
-        el("td", { klasea: "txiki", testua: j.fakzio_izena || "—" }),
+        el("td", { klasea: "txiki",
+                   testua: (j.fakzio_izena || "—") + (j.arlote_izena ? ` · ${j.arlote_izena}` : "") }),
         el("td", { klasea: "zenb", testua: j.puntuak === null ? "—" : String(j.puntuak) }),
         el("td", { klasea: j.irabazlea ? "irabazlea" : "txiki",
                    testua: j.irabazlea
@@ -491,25 +496,43 @@ document.getElementById("ir-garbitu").onclick = () => {
 function jokalariLerroaGehitu(balioak = null) {
   const izena = el("input", { klasea: "j-izena", list: "izen-lista", placeholder: "Izena" });
   const fakzioa = el("select", { klasea: "j-fakzioa" });
+  const arlotea = el("select", { klasea: "j-arlotea" });
   const puntuak = el("input", { type: "number", klasea: "j-puntuak", min: "0", max: "999" });
   const mota = el("select", { klasea: "j-mota" });
   const irabazlea = el("input", {
     type: "checkbox", klasea: "j-irabazlea", estiloa: "width:auto;height:18px" });
 
   aukerak(fakzioa, DATUAK.fakzioak, "kodea", "izena", "—");
+  aukerak(arlotea, DATUAK.arloteak, "kodea", "izena", "—");
   aukerak(mota, DATUAK.garaipen_motak, "kodea", "izena", "—");
+
+  // Pertsonaia hautatzeko eremua Vagabond-ekin bakarrik agertzen da. Zein
+  // fakziok duen pertsonaia katalogoko datua da (`arlotea`), ez kodean idatzia.
+  const arloteEremua = el("div", { estiloa: "max-width:130px" },
+                          [el("label", { testua: "Pertsonaia" }), arlotea]);
+
+  function arloteEremuaEguneratu() {
+    const f = DATUAK.fakzioak.find(x => x.kodea === fakzioa.value);
+    const agertu = !!(f && f.arlotea);
+    arloteEremua.style.display = agertu ? "" : "none";
+    if (!agertu) arlotea.value = "";
+  }
+  fakzioa.addEventListener("change", arloteEremuaEguneratu);
 
   if (balioak) {
     izena.value = balioak.jokalari_izena || "";
     fakzioa.value = balioak.fakzio_kodea || "";
+    arlotea.value = balioak.arlote_kodea || "";
     puntuak.value = balioak.puntuak === null || balioak.puntuak === undefined ? "" : balioak.puntuak;
     mota.value = balioak.garaipen_mota || "";
     irabazlea.checked = !!balioak.irabazlea;
   }
+  arloteEremuaEguneratu();
 
   const lerroa = el("div", { klasea: "lerroa jokalari-lerroa" }, [
     el("div", {}, [el("label", { testua: "Jokalaria" }), izena]),
     el("div", {}, [el("label", { testua: "Fakzioa" }), fakzioa]),
+    arloteEremua,
     el("div", { estiloa: "max-width:90px" }, [el("label", { testua: "Puntuak" }), puntuak]),
     el("div", { estiloa: "max-width:120px" }, [el("label", { testua: "Garaipena" }), mota]),
     el("div", { estiloa: "max-width:80px; text-align:center" }, [
@@ -579,6 +602,7 @@ document.getElementById("f-gorde").onclick = async () => {
     jokalariak.push({
       izena,
       fakzio_kodea: lerroa.querySelector(".j-fakzioa").value || null,
+      arlote_kodea: lerroa.querySelector(".j-arlotea").value || null,
       puntuak: puntuak === "" ? null : parseInt(puntuak, 10),
       irabazlea: lerroa.querySelector(".j-irabazlea").checked,
       garaipen_mota: lerroa.querySelector(".j-mota").value || null,
@@ -632,7 +656,7 @@ async function estatistikakKargatu() {
   try {
     const e = await api("/api/estatistikak");
     taulaBete(document.getElementById("est-jokalariak"),
-      ["Jokalaria", "Partidak", "Garaipenak", "Irabazte-tasa", "Puntu ertaina", "Onena"],
+      ["Jokalaria", "Partidak", "Garaipenak", "Irabazte-tasa", "Batezbesteko Puntuazioa", "Onena"],
       e.jokalariak.map(j => [
         el("td", { testua: j.izena }),
         el("td", { klasea: "zenb", testua: String(j.partidak) }),
@@ -643,7 +667,7 @@ async function estatistikakKargatu() {
       ]));
 
     taulaBete(document.getElementById("est-fakzioak"),
-      ["Fakzioa", "Hedapena", "Aldiak", "Garaipenak", "Irabazte-tasa", "Puntu ertaina"],
+      ["Fakzioa", "Hedapena", "Aldiak", "Garaipenak", "Irabazte-tasa", "Batezbesteko Puntuazioa"],
       e.fakzioak.map(f => [
         el("td", {}, [
           el("span", { klasea: "fakzio-punto", estiloa: `background:${f.kolorea || "#666"}` }),
@@ -669,6 +693,17 @@ async function estatistikakKargatu() {
         tasaGelaxka(m.tasa),
       ]));
 
+    taulaBete(document.getElementById("est-arloteak"),
+      ["Pertsonaia", "Hedapena", "Partidak", "Garaipenak", "Tasa", "Batezbesteko Puntuazioa"],
+      e.arloteak.map(a => [
+        el("td", { testua: a.izena }),
+        el("td", { klasea: "txiki", testua: a.hedapena || "—" }),
+        el("td", { klasea: "zenb", testua: String(a.partidak) }),
+        el("td", { klasea: "zenb", testua: String(a.garaipenak) }),
+        tasaGelaxka(a.tasa),
+        el("td", { klasea: "zenb", testua: a.batez_beste === null ? "—" : String(a.batez_beste) }),
+      ]));
+
     const osagarriak = [
       ...e.mertzenarioak.map(x => ({ ...x, mota: "Mertzenarioa" })),
       ...e.leku_bereziak.map(x => ({ ...x, mota: "Lekua" })),
@@ -688,6 +723,7 @@ async function estatistikakKargatu() {
 
 const KATALOGOAK = [
   { bidea: "fakzioak", izenburua: "Fakzioak", gakoa: "fakzioak" },
+  { bidea: "arloteak", izenburua: "Vagabond pertsonaiak", gakoa: "arloteak" },
   { bidea: "mertzenarioak", izenburua: "Mertzenarioak", gakoa: "mertzenarioak" },
   { bidea: "leku-bereziak", izenburua: "Leku bereziak", gakoa: "leku_bereziak" },
 ];

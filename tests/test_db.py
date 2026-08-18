@@ -89,6 +89,50 @@ def test_mertzenario_eta_leku_katalogoak_hasieratzen_dira(tmp_path):
     konn.close()
 
 
+def test_zutabe_berriak_lehendik_dagoen_datu_basean(tmp_path):
+    """`CREATE TABLE IF NOT EXISTS`-ek ez ditu zutabeak gehitzen.
+
+    Datu-base zaharrago batek taulak baditu baina zutabe berririk ez, eta
+    horiek gehitu behar dira datuak galdu gabe.
+    """
+    import sqlite3
+
+    bidea = tmp_path / "zutabeak.db"
+    db.hasieratu(bidea)
+
+    # Bertsio zaharreko egoera simulatu: zutabe berriak kendu.
+    zaharra = sqlite3.connect(bidea)
+    zaharra.execute("ALTER TABLE fakzioak DROP COLUMN arlotea")
+    zaharra.execute("ALTER TABLE partida_jokalariak DROP COLUMN arlote_kodea")
+    zaharra.commit()
+    zaharra.close()
+
+    db.hasieratu(bidea)
+
+    konn = db.konexioa(bidea)
+    fakzio_zutabeak = {l[1] for l in konn.execute("PRAGMA table_info(fakzioak)")}
+    pj_zutabeak = {l[1] for l in konn.execute("PRAGMA table_info(partida_jokalariak)")}
+    assert "arlotea" in fakzio_zutabeak
+    assert "arlote_kodea" in pj_zutabeak
+    # Eta hazi-datuek berriro markatzen dute zein diren Vagabond-ak.
+    assert konn.execute(
+        "SELECT arlotea FROM fakzioak WHERE kodea = 'vagabond'").fetchone()[0] == 1
+    konn.close()
+
+
+def test_arlote_katalogoa_hasieratzen_da(tmp_path):
+    bidea = tmp_path / "arloteak.db"
+    db.hasieratu(bidea)
+    konn = db.konexioa(bidea)
+
+    izenak = {l[0] for l in konn.execute("SELECT izena FROM arloteak")}
+    assert izenak == {"Thief", "Tinker", "Ranger", "Vagrant", "Arbiter",
+                      "Scoundrel", "Ronin", "Adventurer", "Harrier"}
+    assert {l[0] for l in konn.execute("SELECT kodea FROM fakzioak WHERE arlotea = 1")} == {
+        "vagabond", "vagabond2"}
+    konn.close()
+
+
 def test_kodeak_ez_dira_aldatu(tmp_path):
     """Kode bat aldatzeak lehendik dauden gertaerak hautsiko lituzke.
 

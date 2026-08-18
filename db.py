@@ -21,18 +21,33 @@ ESKEMA_FITX = BASE_DIR / "eskema.sql"
 # aldaezinak dira (sinkronizatuta eta babeskopietan). Izena bakarrik alda daiteke.
 
 FAKZIOAK = [
-    # (kodea, izena, hedapena, kolorea)
-    ("marquise",  "Marquise de Cat",      "Root",                    "#E8912D"),
-    ("eyrie",     "Eyrie Dynasties",      "Root",                    "#3B76C4"),
-    ("alliance",  "Woodland Alliance",    "Root",                    "#4FA65B"),
-    ("vagabond",  "Vagabond",             "Root",                    "#9B9B9B"),
-    ("vagabond2", "Vagabond (2nd)",       "The Riverfolk Expansion", "#6E6E6E"),
-    ("cult",      "Lizard Cult",          "The Riverfolk Expansion", "#E8D44D"),
-    ("riverfolk", "Riverfolk Company",    "The Riverfolk Expansion", "#43BFC7"),
-    ("duchy",     "Underground Duchy",    "The Underworld Expansion", "#C4762D"),
-    ("corvid",    "Corvid Conspiracy",    "The Underworld Expansion", "#7A4FA6"),
-    ("hundreds",  "Lord of the Hundreds", "The Marauder Expansion",  "#C43B3B"),
-    ("keepers",   "Keepers in Iron",      "The Marauder Expansion",  "#8C9EA6"),
+    # (kodea, izena, hedapena, kolorea, arlotea)
+    # `arlotea = 1`: fakzio horrek pertsonaia bat hautatzen du (Vagabond-ak).
+    ("marquise",  "Marquise de Cat",      "Root",                    "#E8912D", 0),
+    ("eyrie",     "Eyrie Dynasties",      "Root",                    "#3B76C4", 0),
+    ("alliance",  "Woodland Alliance",    "Root",                    "#4FA65B", 0),
+    ("vagabond",  "Vagabond",             "Root",                    "#9B9B9B", 1),
+    ("vagabond2", "Vagabond (2nd)",       "The Riverfolk Expansion", "#6E6E6E", 1),
+    ("cult",      "Lizard Cult",          "The Riverfolk Expansion", "#E8D44D", 0),
+    ("riverfolk", "Riverfolk Company",    "The Riverfolk Expansion", "#43BFC7", 0),
+    ("duchy",     "Underground Duchy",    "The Underworld Expansion", "#C4762D", 0),
+    ("corvid",    "Corvid Conspiracy",    "The Underworld Expansion", "#7A4FA6", 0),
+    ("hundreds",  "Lord of the Hundreds", "The Marauder Expansion",  "#C43B3B", 0),
+    ("keepers",   "Keepers in Iron",      "The Marauder Expansion",  "#8C9EA6", 0),
+]
+
+# Vagabond-aren pertsonaiak. Fakzioa bera "Vagabond" da; hemen zein pertsonaia
+# erabili den zehazten da (Thief, Ranger…).
+ARLOTEAK = [
+    ("thief",      "Thief",      "Root"),
+    ("tinker",     "Tinker",     "Root"),
+    ("ranger",     "Ranger",     "Root"),
+    ("vagrant",    "Vagrant",    "The Riverfolk Expansion"),
+    ("arbiter",    "Arbiter",    "The Riverfolk Expansion"),
+    ("scoundrel",  "Scoundrel",  "The Riverfolk Expansion"),
+    ("ronin",      "Ronin",      "The Vagabond Pack"),
+    ("adventurer", "Adventurer", "The Vagabond Pack"),
+    ("harrier",    "Harrier",    "The Vagabond Pack"),
 ]
 
 MAPAK = [
@@ -135,6 +150,7 @@ def eskema_ezarri(konn: sqlite3.Connection) -> None:
     ditzake, eta hemen osatzen dira.
     """
     konn.executescript(ESKEMA_FITX.read_text(encoding="utf-8"))
+    _zutabeak_ziurtatu(konn)
 
     # Izenak abio bakoitzean freskatzen dira, hazi-datuak aldatzen direnean
     # lehendik dagoen datu-basea ere eguneratu dadin (adib. euskarazko izenetatik
@@ -142,11 +158,18 @@ def eskema_ezarri(konn: sqlite3.Connection) -> None:
     # katalogotik eskuz aldatu dituenean: hori gertaera batek markatzen du,
     # `azken_lamport > 0` utziz.
     konn.executemany(
-        "INSERT INTO fakzioak (kodea, izena, hedapena, kolorea) VALUES (?,?,?,?) "
+        "INSERT INTO fakzioak (kodea, izena, hedapena, kolorea, arlotea) VALUES (?,?,?,?,?) "
         "ON CONFLICT(kodea) DO UPDATE SET izena = excluded.izena, "
-        "hedapena = excluded.hedapena, kolorea = excluded.kolorea "
+        "hedapena = excluded.hedapena, kolorea = excluded.kolorea, "
+        "arlotea = excluded.arlotea "
         "WHERE fakzioak.azken_lamport = 0",
         FAKZIOAK,
+    )
+    konn.executemany(
+        "INSERT INTO arloteak (kodea, izena, hedapena) VALUES (?,?,?) "
+        "ON CONFLICT(kodea) DO UPDATE SET izena = excluded.izena, "
+        "hedapena = excluded.hedapena WHERE arloteak.azken_lamport = 0",
+        ARLOTEAK,
     )
     konn.executemany(
         "INSERT INTO mertzenarioak (kodea, izena, hedapena) VALUES (?,?,?) "
@@ -171,6 +194,23 @@ def eskema_ezarri(konn: sqlite3.Connection) -> None:
         KARTA_SORTAK,
     )
     konn.execute("INSERT OR IGNORE INTO meta (gakoa, balioa) VALUES ('lamport', '0')")
+
+
+# Zutabe berriak lehendik dauden tauletan. `CREATE TABLE IF NOT EXISTS`-ek ez
+# ditu zutabeak gehitzen, beraz eskema hazten denean hemen zerrendatu behar dira.
+# Zerrenda hau ez da inoiz txikitzen: datu-base zaharrago batek urrats guztiak
+# behar ditu.
+ZUTABE_BERRIAK = [
+    ("fakzioak", "arlotea", "INTEGER NOT NULL DEFAULT 0"),
+    ("partida_jokalariak", "arlote_kodea", "TEXT"),
+]
+
+
+def _zutabeak_ziurtatu(konn: sqlite3.Connection) -> None:
+    for taula, zutabea, definizioa in ZUTABE_BERRIAK:
+        badaudenak = {l[1] for l in konn.execute(f"PRAGMA table_info({taula})")}
+        if zutabea not in badaudenak:
+            konn.execute(f"ALTER TABLE {taula} ADD COLUMN {zutabea} {definizioa}")
 
 
 def meta_irakurri(konn: sqlite3.Connection, gakoa: str, lehenetsia: str = "") -> str:

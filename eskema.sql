@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS partida_jokalariak (
     irabazlea      INTEGER NOT NULL DEFAULT 0,
     garaipen_mota  TEXT,                   -- puntuak | nagusitasuna | koalizioa | berezia
     koalizio_kidea TEXT,
+    arlote_kodea   TEXT,                   -- Vagabond bada, zein pertsonaia
     PRIMARY KEY (partida_id, jokalari_id)
 );
 
@@ -95,6 +96,18 @@ CREATE TABLE IF NOT EXISTS fakzioak (
     izena         TEXT NOT NULL,
     hedapena      TEXT,
     kolorea       TEXT,
+    arlotea       INTEGER NOT NULL DEFAULT 0,  -- pertsonaia hautatzen duen fakzioa (Vagabond)
+    ezabatuta     INTEGER NOT NULL DEFAULT 0,
+    azken_lamport INTEGER NOT NULL DEFAULT 0,
+    azken_gailua  TEXT NOT NULL DEFAULT ''
+);
+
+-- Vagabond-aren pertsonaiak (Thief, Ranger…). Fakzio bat baino gehiagok erabil
+-- ditzake (bigarren Vagabond-ak), beraz katalogo bereizia da.
+CREATE TABLE IF NOT EXISTS arloteak (
+    kodea         TEXT PRIMARY KEY,
+    izena         TEXT NOT NULL,
+    hedapena      TEXT,
     ezabatuta     INTEGER NOT NULL DEFAULT 0,
     azken_lamport INTEGER NOT NULL DEFAULT 0,
     azken_gailua  TEXT NOT NULL DEFAULT ''

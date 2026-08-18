@@ -160,12 +160,13 @@ def hasiera():
         ],
         fakzioak=[
             dict(l) for l in k.execute(
-                "SELECT kodea, izena, hedapena, kolorea FROM fakzioak "
+                "SELECT kodea, izena, hedapena, kolorea, arlotea FROM fakzioak "
                 "WHERE ezabatuta = 0 ORDER BY hedapena, izena"
             )
         ],
         mertzenarioak=[dict(l) for l in k.execute(_KATALOGO_KONTSULTA % "mertzenarioak")],
         leku_bereziak=[dict(l) for l in k.execute(_KATALOGO_KONTSULTA % "leku_bereziak")],
+        arloteak=[dict(l) for l in k.execute(_KATALOGO_KONTSULTA % "arloteak")],
         mapak=[dict(l) for l in k.execute("SELECT * FROM mapak ORDER BY izena")],
         karta_sortak=[dict(l) for l in k.execute("SELECT * FROM karta_sortak")],
         garaipen_motak=[
@@ -293,6 +294,7 @@ _KATALOGOAK = {
     "fakzioak":      ("fakzioa_gorde", "fakzioa_ezabatu", True),
     "mertzenarioak": ("mertzenarioa_gorde", "mertzenarioa_ezabatu", False),
     "leku-bereziak": ("lekua_gorde", "lekua_ezabatu", False),
+    "arloteak":      ("arlotea_gorde", "arlotea_ezabatu", False),
 }
 
 
@@ -344,6 +346,7 @@ def estatistikak_ikusi():
         fakzioak=estatistikak.fakzioen_estatistikak(k),
         matrizea=estatistikak.jokalari_fakzio_matrizea(k),
         bilakaera=estatistikak.bilakaera(k),
+        arloteak=estatistikak.arloteen_estatistikak(k),
         **estatistikak.osagarrien_erabilera(k),
     )
 

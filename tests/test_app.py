@@ -202,6 +202,68 @@ def test_erabilera_estatistiketan_agertzen_da(bezeroa):
     assert [l["izena"] for l in est["leku_bereziak"]] == ["The Tower"]
 
 
+# ─── Vagabond pertsonaiak ───────────────────────────────────────────────────
+
+
+def test_vagabond_pertsonaia_gordetzen_da(bezeroa):
+    eskaera(bezeroa, "post", "/api/partidak", partida_datuak(jokalariak=[
+        {"izena": "Oier", "fakzio_kodea": "vagabond", "arlote_kodea": "ranger",
+         "puntuak": 30, "irabazlea": True, "garaipen_mota": "puntuak"},
+        {"izena": "Ander", "fakzio_kodea": "vagabond2", "arlote_kodea": "arbiter",
+         "puntuak": 24},
+    ]))
+
+    p = partidak(bezeroa)[0]
+    pertsonaiak = {j["jokalari_izena"]: j["arlote_izena"] for j in p["jokalariak"]}
+    assert pertsonaiak == {"Oier": "Ranger", "Ander": "Arbiter"}
+
+
+def test_vagabond_gabeko_jokalariak_pertsonaiarik_gabe(bezeroa):
+    eskaera(bezeroa, "post", "/api/partidak", partida_datuak())
+    p = partidak(bezeroa)[0]
+    assert all(j["arlote_izena"] is None for j in p["jokalariak"])
+
+
+def test_pertsonaia_editatzean_alda_daiteke(bezeroa):
+    partida_id = eskaera(bezeroa, "post", "/api/partidak", partida_datuak(jokalariak=[
+        {"izena": "Oier", "fakzio_kodea": "vagabond", "arlote_kodea": "thief", "puntuak": 30},
+    ])).get_json()["id"]
+
+    eskaera(bezeroa, "post", "/api/partidak", partida_datuak(id=partida_id, jokalariak=[
+        {"izena": "Oier", "fakzio_kodea": "vagabond", "arlote_kodea": "harrier", "puntuak": 30},
+    ]))
+    assert partidak(bezeroa)[0]["jokalariak"][0]["arlote_izena"] == "Harrier"
+
+    # Fakzioa aldatuz gero, pertsonaia kendu daiteke.
+    eskaera(bezeroa, "post", "/api/partidak", partida_datuak(id=partida_id, jokalariak=[
+        {"izena": "Oier", "fakzio_kodea": "marquise", "puntuak": 30},
+    ]))
+    assert partidak(bezeroa)[0]["jokalariak"][0]["arlote_izena"] is None
+
+
+def test_zein_fakziok_duen_pertsonaia_apitik_dator(bezeroa):
+    """Interfazeak katalogotik jakiten du noiz erakutsi pertsonaia-eremua."""
+    hasiera = eskaera(bezeroa, "get", "/api/hasiera").get_json()
+    arloteak = {f["kodea"] for f in hasiera["fakzioak"] if f["arlotea"]}
+    assert arloteak == {"vagabond", "vagabond2"}
+    assert len(hasiera["arloteak"]) == 9
+
+
+def test_pertsonaien_estatistikak(bezeroa):
+    for data, kodea, irabazi in [("2026-05-01", "ranger", True),
+                                 ("2026-05-02", "ranger", False),
+                                 ("2026-05-03", "thief", True)]:
+        eskaera(bezeroa, "post", "/api/partidak", partida_datuak(data=data, jokalariak=[
+            {"izena": "Oier", "fakzio_kodea": "vagabond", "arlote_kodea": kodea,
+             "puntuak": 30, "irabazlea": irabazi},
+        ]))
+
+    est = eskaera(bezeroa, "get", "/api/estatistikak").get_json()
+    arloteak = {a["izena"]: (a["partidak"], a["garaipenak"], a["tasa"]) for a in est["arloteak"]}
+    assert arloteak["Ranger"] == (2, 1, 50.0)
+    assert arloteak["Thief"] == (1, 1, 100.0)
+
+
 # ─── Katalogoen edizioa ─────────────────────────────────────────────────────
 
 

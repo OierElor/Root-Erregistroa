@@ -252,6 +252,22 @@ def test_partidaren_mertzenarioak_sinkronizatzen_dira(tmp_path, monkeypatch, tal
         assert k.execute("SELECT COUNT(*) FROM partida_lekuak").fetchone()[0] == 0
 
 
+def test_vagabond_pertsonaia_sinkronizatzen_da(tmp_path, monkeypatch, taldea):
+    ka, kb = datu_basea(tmp_path, "a"), datu_basea(tmp_path, "b")
+    with gailua_bezala(monkeypatch, "gailua-a"):
+        gertaerak.gertaera_berria(ka, "partida_gorde", {
+            "id": uuid.uuid4().hex, "data": "2026-04-01",
+            "jokalariak": [
+                {"jokalari_id": "j1", "fakzio_kodea": "vagabond",
+                 "arlote_kodea": "scoundrel", "puntuak": 30, "irabazlea": True},
+            ],
+        })
+    truke_osoa(monkeypatch, ka, kb)
+
+    assert kb.execute(
+        "SELECT arlote_kodea FROM partida_jokalariak").fetchone()[0] == "scoundrel"
+
+
 @pytest.mark.parametrize(
     "gailu_id,portua",
     [("gailua-a", 0), ("gailua-a", 99999), ("gailua-a", "47778"), ("../etc", 47778)],

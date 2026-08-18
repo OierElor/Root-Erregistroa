@@ -141,6 +141,12 @@ def _balidatu_partida_gorde(karga: dict) -> dict:
                 "koalizio_kidea": _kodea(
                     sarrera.get("koalizio_kidea"), f"jokalariak[{i}].koalizio_kidea", True
                 ),
+                # Vagabond-ekin bakarrik du zentzua, baina ez da hemen behartzen:
+                # zein fakziok duten pertsonaia katalogoko datua da (`fakzioak.arlotea`),
+                # eta gertaerak datuen aldaketak baino zaharragoak izan daitezke.
+                "arlote_kodea": _kodea(
+                    sarrera.get("arlote_kodea"), f"jokalariak[{i}].arlote_kodea", True
+                ),
             }
         )
 
@@ -221,6 +227,8 @@ MOTAK = {
     "mertzenarioa_ezabatu": (_balidatu_ezabatu("kodea"), "kodea", "mertzenarioa:"),
     "lekua_gorde":         (_balidatu_katalogoa("lekua"), "kodea", "lekua:"),
     "lekua_ezabatu":       (_balidatu_ezabatu("kodea"), "kodea", "lekua:"),
+    "arlotea_gorde":       (_balidatu_katalogoa("arlotea"), "kodea", "arlotea:"),
+    "arlotea_ezabatu":     (_balidatu_ezabatu("kodea"), "kodea", "arlotea:"),
 }
 
 
@@ -370,12 +378,12 @@ def entitatea_berreraiki(konn: sqlite3.Connection, entitate_id: str) -> None:
         )
         konn.executemany(
             "INSERT INTO partida_jokalariak (partida_id, jokalari_id, fakzio_kodea, "
-            "puntuak, hasiera_ordena, irabazlea, garaipen_mota, koalizio_kidea) "
-            "VALUES (?,?,?,?,?,?,?,?)",
+            "puntuak, hasiera_ordena, irabazlea, garaipen_mota, koalizio_kidea, "
+            "arlote_kodea) VALUES (?,?,?,?,?,?,?,?,?)",
             [
                 (egoera["id"], p["jokalari_id"], p["fakzio_kodea"], p["puntuak"],
                  p["hasiera_ordena"], p["irabazlea"], p["garaipen_mota"],
-                 p["koalizio_kidea"])
+                 p["koalizio_kidea"], p.get("arlote_kodea"))
                 for p in egoera["jokalariak"]
             ],
         )
@@ -398,8 +406,12 @@ def entitatea_berreraiki(konn: sqlite3.Connection, entitate_id: str) -> None:
             (egoera["kodea"], egoera["izena"], egoera["hedapena"], egoera["kolorea"],
              ezabatuta, azken_lamport, azken_gailua),
         )
-    elif mota_azkena in ("mertzenarioa_gorde", "lekua_gorde"):
-        taula = "mertzenarioak" if mota_azkena == "mertzenarioa_gorde" else "leku_bereziak"
+    elif mota_azkena in ("mertzenarioa_gorde", "lekua_gorde", "arlotea_gorde"):
+        taula = {
+            "mertzenarioa_gorde": "mertzenarioak",
+            "lekua_gorde": "leku_bereziak",
+            "arlotea_gorde": "arloteak",
+        }[mota_azkena]
         konn.execute(
             f"INSERT INTO {taula} (kodea, izena, hedapena, ezabatuta, "
             "azken_lamport, azken_gailua) VALUES (?,?,?,?,?,?) "
@@ -423,7 +435,7 @@ def birsortu(konn: sqlite3.Connection) -> int:
         konn.execute(f"DELETE FROM {taula}")
     # Katalogoetan lerroak ez dira ezabatzen (hazi-datuak dira); markak bakarrik
     # berrezartzen dira, gero gertaerek berriro ezarri ditzaten.
-    for taula in ("fakzioak", "mertzenarioak", "leku_bereziak"):
+    for taula in ("fakzioak", "mertzenarioak", "leku_bereziak", "arloteak"):
         konn.execute(
             f"UPDATE {taula} SET ezabatuta = 0, azken_lamport = 0, azken_gailua = ''"
         )

@@ -4,8 +4,8 @@ Root mahai-jokoaren partiden erregistroa, **zerbitzaririk gabe** sinkronizatzen 
 taldeko ordenagailu guztien artean, eta babeskopia automatikoekin.
 
 * Partidak sartu, **editatu** eta ezabatu: data, mapa, karta sorta, jokalari bakoitzaren
-  fakzioa, puntuak eta garaipen mota, erabilitako **mertzenarioak** (Hirelings) eta
-  **leku bereziak** (Landmarks).
+  fakzioa, puntuak eta garaipen mota, Vagabond-en **pertsonaia** (Thief, Ranger…),
+  erabilitako **mertzenarioak** (Hirelings) eta **leku bereziak** (Landmarks).
 * Jokoaren izen guztiak **ingelesez, kartetan bezala** (interfazea euskaraz).
 * Estatistikak: jokalarien sailkapena, fakzioen irabazte-tasak, jokalari bakoitzak zein
   fakziorekin jokatzen duen ondoen, eta mertzenario/leku erabilienak.
@@ -85,6 +85,19 @@ sinkronizatzen dira eta **ez dira galtzen aplikazioa eguneratzean**.
 Mertzenario bakoitzak izen desberdina du sustatuta (*promoted*) edo jaitsita (*demoted*)
 dagoenean — Forest Patrol / Feline Physicians, adibidez — beraz erabilitako karta hautatzeak
 dena esaten du berez.
+
+### Vagabond-en pertsonaia
+
+Jokalari batek Vagabond aukeratzen duenean, **Pertsonaia** eremu bat agertzen da alboan:
+Thief, Tinker, Ranger (oinarrizkoa), Vagrant, Arbiter, Scoundrel (*The Riverfolk Expansion*)
+edo Ronin, Adventurer, Harrier (*The Vagabond Pack*). Bi Vagabond dituzten partidetan
+bakoitzak berea du.
+
+Eremua fakzioaren arabera agertzen da, eta hori katalogoko datu bat da (`arlotea` marka),
+ez kodean idatzitako zerrenda bat: Vagabond moduko fakzio berri bat sortzen bada, marka
+hori jarri eta pertsonaia-eremua ere agertuko zaio.
+
+Estatistiketan pertsonaia bakoitzaren irabazte-tasa duzu.
 
 ### Partidak editatzea
 
