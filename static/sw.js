@@ -5,7 +5,7 @@
 // (~10 MB) eta erregistroaren kodea gordetzen ditu, lehen bisitaren ondoren
 // sarerik gabe ere ibil dadin.
 
-const CACHE = "root-erregistroa-v1";
+const CACHE = "root-erregistroa-v2";
 
 // Aplikazioaren muina. Python iturriak `../`-tik datoz: mahaigainak eta
 // mobilak fitxategi berberak erabiltzen dituzte, kopiarik gabe.
@@ -15,6 +15,10 @@ const OINARRIA = [
   "./pyodide-abioa.js",
   "./manifest.json",
   "./ikonoa.svg",
+  "./ikonoa-192.png",
+  "./ikonoa-512.png",
+  "./ikonoa-maskagarria-512.png",
+  "./ikonoa-180.png",
   "../db.py",
   "../konfig.py",
   "../gertaerak.py",

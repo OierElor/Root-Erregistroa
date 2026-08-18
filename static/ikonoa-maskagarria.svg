@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Ertz osoa beteta, eta marrazkia erdian txikituta: Androidek nahi duen
+       formara moztuta ere, ez da ezer galtzen. -->
+  <rect width="512" height="512" fill="#16130f"/>
+  <g transform="translate(256 256) scale(0.66) translate(-256 -256)">
+    <g stroke="#4a3f2e" stroke-width="17" stroke-linecap="round" fill="none">
+      <path d="M152 142 L360 142"/>
+      <path d="M152 142 L256 268"/>
+      <path d="M360 142 L256 268"/>
+      <path d="M256 268 L152 384"/>
+      <path d="M256 268 L360 384"/>
+      <path d="M152 384 L360 384"/>
+    </g>
+    <g stroke="#16130f" stroke-width="9">
+      <circle cx="152" cy="142" r="47" fill="#d9a441"/>
+      <circle cx="360" cy="142" r="47" fill="#6fae5c"/>
+      <circle cx="256" cy="268" r="54" fill="#c9553f"/>
+      <circle cx="152" cy="384" r="47" fill="#a6977f"/>
+      <circle cx="360" cy="384" r="47" fill="#d9a441"/>
+    </g>
+  </g>
+</svg>
