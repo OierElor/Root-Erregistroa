@@ -155,14 +155,14 @@ def test_hatz_marka_berdina_bateratu_ondoren(zubia, tmp_path):
 
         assert mobilarena == mahaigainarena
 
-        # Eta bi partida berberak dituzte biek.
-        #
-        # Multzo gisa konparatzen da, ez zerrenda gisa: `azken_partidak`-ek
-        # `rowid`-rekin ordenatzen du berdinketetan, eta hori gailu bakoitzaren
-        # sartze-ordena da. Data bereko partidak, beraz, ordena desberdinean
-        # ager daitezke bi gailuetan, datuak berdinak izan arren.
-        assert (sorted(p["id"] for p in mobileko_partidak)
-                == sorted(p["id"] for p in mahaigaineko_partidak))
+        # Eta bi partida berberak dituzte biek, ORDENA BEREAN: `azken_partidak`
+        # (estatistikak.py) `azken_lamport`/`azken_gailua`-rekin ordenatzen du
+        # berdinketetan (data bera denean), eta bi balio horiek sinkronizazio
+        # osoak erabiltzen duen erloju logikotik datoz — beraz deterministikoak
+        # dira bi gailuetan, `rowid` gailu bakoitzaren sartze-ordena lokala
+        # litzatekeen bitartean.
+        assert ([p["id"] for p in mobileko_partidak]
+                == [p["id"] for p in mahaigaineko_partidak])
         assert len(mobileko_partidak) == 2
     finally:
         mahaigaina.close()

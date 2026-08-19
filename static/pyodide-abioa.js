@@ -29,8 +29,12 @@ const RootPy = (() => {
   let pyodide = null;
   let zubia = null;
 
+  // Urrats-kopuru osoa, aurrerapen-barrak ehunekoa kalkulatzeko. Pyodide-k ez
+  // du byte-mailako aurrerapenik ematen, beraz urratsez urrats erakusten da.
+  const URRATSAK_GUZTIRA = 5;
+
   async function jaso(bidea) {
-    const erantzuna = await fetch(bidea, { cache: "no-cache" });
+    const erantzuna = await fetch(bidea);
     if (!erantzuna.ok) throw new Error(`Ezin izan da kargatu: ${bidea}`);
     return erantzuna.text();
   }
@@ -45,22 +49,25 @@ const RootPy = (() => {
   async function abiarazi(jakinarazi = () => {}) {
     if (zubia) return zubia;
 
-    jakinarazi("Python kargatzen…");
+    jakinarazi("Python kargatzen…", 1, URRATSAK_GUZTIRA);
     await new Promise((ondo, gaizki) => {
       const s = document.createElement("script");
       s.src = PYODIDE_OINARRIA + "pyodide.js";
+      // jsDelivr-ek CORS onartzen du (`Access-Control-Allow-Origin: *`): hau
+      // gabe erantzuna «opako» da eta service worker-ak ezin du ondo cacheatu.
+      s.crossOrigin = "anonymous";
       s.onload = ondo;
-      s.onerror = () => gaizki(new Error("Ezin izan da Pyodide kargatu"));
+      s.onerror = () => gaizki(new Error("Ezin izan da Pyodide kargatu (sarerik gabe?)"));
       document.head.appendChild(s);
     });
 
     pyodide = await loadPyodide({ indexURL: PYODIDE_OINARRIA });
 
     // `sqlite3` ez dator Pyodide-ren oinarrizko banaketan: bereizita kargatzen da.
-    jakinarazi("Datu-basearen euskarria kargatzen…");
+    jakinarazi("Datu-basearen euskarria kargatzen…", 2, URRATSAK_GUZTIRA);
     await pyodide.loadPackage("sqlite3");
 
-    jakinarazi("Biltegia prestatzen…");
+    jakinarazi("Biltegia prestatzen…", 3, URRATSAK_GUZTIRA);
     // IDBFS: karpeta hau IndexedDB-n gordetzen da, orria itxi ondoren ere.
     pyodide.FS.mkdirTree(DATU_KARPETA);
     pyodide.FS.mount(pyodide.FS.filesystems.IDBFS, {}, DATU_KARPETA);
@@ -83,7 +90,7 @@ os.environ.setdefault("GAILU_IZENA", "Mobila")
 os.environ["ROOT_JOURNAL"] = "DELETE"
 `);
 
-    jakinarazi("Erregistroaren kodea kargatzen…");
+    jakinarazi("Erregistroaren kodea kargatzen…", 4, URRATSAK_GUZTIRA);
     pyodide.FS.mkdirTree(KODE_KARPETA);
     const kodeak = await Promise.all(ITURRIAK.map((i) => jaso(`../${i}`)));
     const kodetzailea = new TextEncoder();
@@ -91,7 +98,7 @@ os.environ["ROOT_JOURNAL"] = "DELETE"
       pyodide.FS.writeFile(`${KODE_KARPETA}/${izena}`, kodetzailea.encode(kodeak[i]));
     });
 
-    jakinarazi("Datu-basea irekitzen…");
+    jakinarazi("Datu-basea irekitzen…", 5, URRATSAK_GUZTIRA);
     zubia = pyodide.runPython(`
 import sys
 sys.path.insert(0, "${KODE_KARPETA}")

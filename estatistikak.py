@@ -132,7 +132,12 @@ def azken_partidak(konn: sqlite3.Connection, muga: int = 50, iragazkia: dict | N
     muga = max(1, min(int(muga), 500))
     partidak = konn.execute(
         f"SELECT * FROM partidak p WHERE {' AND '.join(baldintzak)} "
-        f"ORDER BY p.data DESC, p.rowid DESC LIMIT ?",
+        # `rowid` gailu bakoitzeko sartze-ordena lokala da: bi gailuk data
+        # bereko partidak dituztenean, ordena desberdinean ager litezke
+        # bateratu ondoren. `azken_lamport`/`azken_gailua` sinkronizazio
+        # osoak erabiltzen duen erloju logikoa da, beraz ordena deterministikoa
+        # da bi gailuetan, "azkena sartutakoa lehenengo" esanahia galdu gabe.
+        f"ORDER BY p.data DESC, p.azken_lamport DESC, p.azken_gailua DESC LIMIT ?",
         (*parametroak, muga),
     ).fetchall()
 

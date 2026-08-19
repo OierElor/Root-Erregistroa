@@ -92,6 +92,26 @@
            border-radius: 10px; padding: 1px 9px; font-size: 12px; color: var(--lausoa);
            margin: 4px 4px 0 0; }
 
+  /* Botoi txikiak (Editatu, Ezabatu, Leheneratu...): klase gisa, ez inline
+     estilo gisa, @media-k gainidatzi ahal izan dezan telefonoan. Estilo
+     inline batek beti irabaziko lioke edozein @media arauri. */
+  .botoia-mini { padding: 2px 10px; font-size: 12px; }
+
+  /* Partida-lerroko eremu estuak (Pertsonaia, Puntuak, Garaipena, Irabazi, ×).
+     Zabalera hemen finkatzen da mahaigainerako; @media-k `max-width: none`
+     ezartzen du telefonoan, klase bidez egiten baita eta ez inline estiloz. */
+  .j-pertsonaia { max-width: 130px; }
+  .j-puntuak { max-width: 90px; }
+  .j-garaipena { max-width: 120px; }
+  .j-irabazi { max-width: 80px; }
+  .j-irabazi label { display: flex; align-items: center; justify-content: center;
+                      gap: 6px; cursor: pointer; min-height: 44px; }
+  .j-irabazi input { width: auto; height: 20px; }
+  .j-ezabatu { max-width: 40px; }
+  /* Zabalera bakarrik: padding-a `.botoia`/`.botoia`(mobila)-renetik dator,
+     44px-ko gutxieneko ukitze-eremua bermatzeko. */
+  .j-ezabatu .botoia { width: 100%; }
+
   /* ─── Telefonoa ───────────────────────────────────────────────────────────
      Partidak mahaian bertan sartzeko: eremu handiagoak (hatzarekin errazago),
      zutabe bakarra, eta nabigazioa beheko aldean, erpururaino iristen den lekuan. */
@@ -101,10 +121,13 @@
     h1 { font-size: 17px; }
     .gailua { font-size: 12px; width: 100%; margin-left: 0; }
 
-    /* Nabigazioa behean, finkatuta: esku bakarrez erabiltzeko. */
+    /* Nabigazioa behean, finkatuta: esku bakarrez erabiltzeko. `safe-area`
+       telefono modernoetako beheko keinu-barrak botoiak ez estaltzeko. */
     nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
-          padding: 0; border-top: 1px solid var(--marra); border-bottom: none;
-          overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+          padding: 0; padding-bottom: env(safe-area-inset-bottom, 0);
+          border-top: 1px solid var(--marra); border-bottom: none;
+          overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch;
+          background: var(--panela); }
     nav button { flex: 1 0 auto; padding: 12px 12px; font-size: 13px;
                  border-bottom: none; border-top: 3px solid transparent; }
     nav button.aktibo { border-top-color: var(--nabar); }
@@ -113,13 +136,16 @@
     .txartela { padding: 12px; border-radius: 6px; }
 
     /* Formulario-lerroak zutabe bakarrean: telefonoan bi eremu ondoz ondo
-       jartzeak biak estuegi uzten ditu. */
+       jartzeak biak estuegi uzten ditu. `max-width: none`-k desegiten ditu
+       partida-lerroko eremu estuak (.j-puntuak eta gainerakoak), klase gisa
+       daudenez soilik: estilo inline batek ez luke honek gainidatziko utziko. */
     .lerroa { gap: 8px; }
-    .lerroa > div { flex: 1 1 100%; min-width: 0; }
+    .lerroa > div { flex: 1 1 100%; min-width: 0; max-width: none; }
 
     /* Ukitze-eremu handiagoak: 44px da gomendatutako gutxienekoa. */
     input, select, textarea { padding: 10px; font-size: 16px; }
     .botoia { padding: 11px 16px; }
+    .botoia-mini { padding: 10px 14px; font-size: 13px; min-height: 44px; }
     .zerrenda-tresnak .botoia, .zerrenda-tresnak > div { flex: 1 1 100%; }
 
     /* Taula zabalak ez du orria zeharka mugitu behar: bilgarriak egiten du. */
@@ -129,6 +155,12 @@
     .laburpen-sareta { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); }
     .laburpen-sareta b { font-size: 19px; }
     .hautaketa { grid-template-columns: 1fr 1fr; }
+
+    /* "Aldaketak gorde" beti eskura, formularioa luzea izanik ere. */
+    #f-gorde-barra { position: sticky; bottom: calc(62px + env(safe-area-inset-bottom, 0));
+                     background: var(--atzea); padding: 10px 0; margin: 0 -14px -14px;
+                     padding-left: 14px; padding-right: 14px;
+                     box-shadow: 0 -4px 10px rgba(0,0,0,.35); }
   }
 
   /* Telefono estuenak: hautaketa-koadroak ere zutabe bakarrean. */
@@ -197,7 +229,7 @@
         <label>Oharrak</label>
         <textarea id="f-oharrak" rows="2" placeholder="Adib. koalizioa, gertaera bereziak…"></textarea>
       </div>
-      <div style="margin-top:14px; display:flex; gap:8px">
+      <div id="f-gorde-barra" style="margin-top:14px; display:flex; gap:8px">
         <button class="botoia" id="f-gorde">Gorde partida</button>
         <button class="botoia isila" id="f-utzi" style="display:none">Utzi edizioa</button>
         <button class="botoia isila" id="f-hutsik">Formularioa hustu</button>
@@ -270,6 +302,14 @@
       <div style="margin-top:12px">
         <button class="botoia isila" id="s-gailu-izena">Gailuari izena aldatu</button>
       </div>
+    </div>
+
+    <!-- Mobilean bakarrik agertzen da: mahaigainean fitxategi-sistema arrunta
+         dago, eta babeskopiak daude. Hemen JS-k erakusten du (display:none
+         hasieran, PYODIDE_MODUA ez bada). -->
+    <div class="txartela" id="biltegi-txartela" style="display:none">
+      <h2>Telefonoaren biltegia</h2>
+      <div id="biltegi-egoera" class="txiki"></div>
     </div>
   </section>
 
@@ -345,6 +385,9 @@ function mezua(testua, ondo = true) {
   const eremua = document.getElementById("mezua");
   eremua.textContent = "";
   eremua.appendChild(el("div", { klasea: "mezua " + (ondo ? "ondo" : "gaizki"), testua }));
+  // Mezua `<main>`-en goian dago, baina formulario luze bat betetzen ari
+  // garenean atzamarra behean egoten da: bestela ez da ikusten agertu dela.
+  eremua.scrollIntoView({ behavior: "smooth", block: "nearest" });
   if (ondo) setTimeout(() => { eremua.textContent = ""; }, 5000);
 }
 
@@ -512,12 +555,12 @@ async function partidakKargatu() {
         el("span", { testua: goiburua }),
         el("span", { estiloa: "float:right; display:flex; gap:6px" }, [
           el("button", {
-            klasea: "botoia isila", estiloa: "padding:2px 10px;font-size:12px",
+            klasea: "botoia isila botoia-mini",
             testua: "Editatu",
             onclick: () => partidaEditatu(partida),
           }),
           el("button", {
-            klasea: "botoia isila", estiloa: "padding:2px 10px;font-size:12px",
+            klasea: "botoia isila botoia-mini",
             testua: "Ezabatu",
             onclick: async () => {
               if (!confirm("Partida hau ezabatu?")) return;
@@ -530,7 +573,7 @@ async function partidakKargatu() {
           }),
         ]),
       ]),
-      taula,
+      el("div", { klasea: "taula-bilgarria" }, [taula]),
       osagarriak,
       partida.oharrak ? el("div", { klasea: "oharra", testua: partida.oharrak }) : null,
     ]));
@@ -553,13 +596,16 @@ document.getElementById("ir-garbitu").onclick = () => {
 // ─── Partida berria ────────────────────────────────────────────────────────
 
 function jokalariLerroaGehitu(balioak = null) {
-  const izena = el("input", { klasea: "j-izena", list: "izen-lista", placeholder: "Izena" });
+  const izena = el("input", {
+    klasea: "j-izena", list: "izen-lista", placeholder: "Izena",
+    autocapitalize: "words", autocomplete: "off", enterkeyhint: "next" });
   const fakzioa = el("select", { klasea: "j-fakzioa" });
   const arlotea = el("select", { klasea: "j-arlotea" });
-  const puntuak = el("input", { type: "number", klasea: "j-puntuak", min: "0", max: "999" });
+  const puntuak = el("input", {
+    type: "number", klasea: "j-puntuak", min: "0", max: "999",
+    inputmode: "numeric", enterkeyhint: "done" });
   const mota = el("select", { klasea: "j-mota" });
-  const irabazlea = el("input", {
-    type: "checkbox", klasea: "j-irabazlea", estiloa: "width:auto;height:18px" });
+  const irabazlea = el("input", { type: "checkbox", klasea: "j-irabazlea" });
 
   aukerak(fakzioa, DATUAK.fakzioak, "kodea", "izena", "—");
   aukerak(arlotea, DATUAK.arloteak, "kodea", "izena", "—");
@@ -567,7 +613,11 @@ function jokalariLerroaGehitu(balioak = null) {
 
   // Pertsonaia hautatzeko eremua Vagabond-ekin bakarrik agertzen da. Zein
   // fakziok duen pertsonaia katalogoko datua da (`arlotea`), ez kodean idatzia.
-  const arloteEremua = el("div", { estiloa: "max-width:130px" },
+  //
+  // Zabalerak klase gisa daude (`.j-pertsonaia` eta gainerakoak), ez estilo
+  // inline gisa: estilo inline batek irabaziko lioke edozein @media arauri,
+  // eta telefonoan zutabe bakarrera zabaldu behar dute (ikus @media 620px).
+  const arloteEremua = el("div", { klasea: "j-pertsonaia" },
                           [el("label", { testua: "Pertsonaia" }), arlotea]);
 
   function arloteEremuaEguneratu() {
@@ -592,13 +642,21 @@ function jokalariLerroaGehitu(balioak = null) {
     el("div", {}, [el("label", { testua: "Jokalaria" }), izena]),
     el("div", {}, [el("label", { testua: "Fakzioa" }), fakzioa]),
     arloteEremua,
-    el("div", { estiloa: "max-width:90px" }, [el("label", { testua: "Puntuak" }), puntuak]),
-    el("div", { estiloa: "max-width:120px" }, [el("label", { testua: "Garaipena" }), mota]),
-    el("div", { estiloa: "max-width:80px; text-align:center" }, [
-      el("label", { testua: "Irabazi" }), irabazlea]),
-    el("div", { estiloa: "max-width:40px" }, [
-      el("button", { klasea: "botoia isila", testua: "×",
-                     onclick: (e) => e.target.closest(".jokalari-lerroa").remove() })]),
+    el("div", { klasea: "j-puntuak" }, [el("label", { testua: "Puntuak" }), puntuak]),
+    el("div", { klasea: "j-garaipena" }, [el("label", { testua: "Garaipena" }), mota]),
+    // Kontrol-laukia `<label>`-ak inguratuta: testua sakatuta ere markatzen
+    // da, eta ez soilik 18px-ko kutxa txikia (ukitzeko zaila hatzarekin).
+    el("div", { klasea: "j-irabazi" }, [
+      el("label", {}, [document.createTextNode("Irabazi"), irabazlea])]),
+    el("div", { klasea: "j-ezabatu" }, [
+      el("button", {
+        klasea: "botoia isila", testua: "×",
+        onclick: (e) => {
+          const badu = izena.value.trim() || puntuak.value;
+          if (badu && !confirm(`"${izena.value || "Jokalaria"}" kendu lerrotik?`)) return;
+          e.target.closest(".jokalari-lerroa").remove();
+        },
+      })]),
   ]);
 
   const eremua = document.getElementById("f-jokalariak");
@@ -800,12 +858,12 @@ function katalogoakErakutsi() {
         el("td", { klasea: "txiki", testua: sarrera.kodea }),
         el("td", { estiloa: "text-align:right; white-space:nowrap" }, [
           el("button", {
-            klasea: "botoia isila", estiloa: "padding:2px 9px;font-size:12px",
+            klasea: "botoia isila botoia-mini",
             testua: "Izena aldatu",
             onclick: () => katalogoaGorde(katalogoa, sarrera),
           }),
           el("button", {
-            klasea: "botoia isila", estiloa: "padding:2px 9px;font-size:12px;margin-left:5px",
+            klasea: "botoia isila botoia-mini", estiloa: "margin-left:5px",
             testua: "Ezabatu",
             onclick: () => katalogoaEzabatu(katalogoa, sarrera),
           }),
@@ -891,7 +949,70 @@ async function sinkroKargatu() {
         ]));
       }
     }
+
+    if (PYODIDE_MODUA) esportazioGogorarazlea(s.gertaerak);
   } catch (e) { mezua(e.message, false); }
+}
+
+// ─── Telefonoaren biltegia (mobila bakarrik) ────────────────────────────────
+// Mobilean ez dago babeskopiarik: `Esportatu fitxategia` da babes bakarra.
+// Bi arrisku daude: Androidek biltegia hustea lekurik gabe geratzean, eta
+// erabiltzaileak esportatzea ahaztea. Hemen biak arintzen dira.
+
+const ESPORTAZIO_GAKOA = "root-azken-esportazio-gertaerak";
+
+// Nabigatzaileari "iraunkorra" izateko eskatzen zaio: onartuz gero, Androidek
+// ez du gure biltegia hustuko lekurik gabe geratzean. Instalatutako PWA bati
+// normalean automatikoki ematen zaio. Ezetza jasota ere ez da errore bat: ez
+// dago erabiltzaileari galdetzeko modurik, egoera erakustea baino ez da egiten.
+async function biltegiaEgiaztatu() {
+  if (!navigator.storage) return;
+  const txartela = document.getElementById("biltegi-txartela");
+  const egoera = document.getElementById("biltegi-egoera");
+  txartela.style.display = "";
+
+  let iraunkorra = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+  if (!iraunkorra && navigator.storage.persist) {
+    iraunkorra = await navigator.storage.persist();
+  }
+
+  egoera.textContent = "";
+  egoera.appendChild(el("p", {
+    testua: iraunkorra
+      ? "✓ Biltegia babestuta: nabigatzaileak ez du automatikoki hustuko."
+      : "⚠ Nabigatzaileak ez du biltegia babestu. Lekurik gabe geratzen bada, " +
+        "zure partidak ezaba litzake. Esportatu maiz.",
+  }));
+
+  if (navigator.storage.estimate) {
+    const { usage, quota } = await navigator.storage.estimate();
+    if (quota) {
+      const ehunekoa = ((usage / quota) * 100).toFixed(1);
+      egoera.appendChild(el("p", { klasea: "txiki",
+        testua: `Erabilita: ${(usage / 1024 / 1024).toFixed(1)} MB / ` +
+                `${(quota / 1024 / 1024 / 1024).toFixed(1)} GB (${ehunekoa}%)` }));
+    }
+  }
+}
+
+// Azken esportazioaz geroztik partida berriak sartu badira, gogorarazi:
+// esportatzea da mobileko babeskopia bakarra.
+function esportazioGogorarazlea(uneko_gertaerak) {
+  const azkena = parseInt(localStorage.getItem(ESPORTAZIO_GAKOA) || "0", 10);
+  const egoera = document.getElementById("biltegi-egoera");
+  const zaharra = document.getElementById("esportazio-oharra");
+  if (zaharra) zaharra.remove();
+  if (uneko_gertaerak > azkena) {
+    egoera.appendChild(el("p", { id: "esportazio-oharra", klasea: "mezua gaizki",
+      estiloa: "margin-top:8px",
+      testua: `Azken esportazioaz geroztik aldaketak daude. Esportatu babeskopia gisa.` }));
+  }
+}
+
+function esportazioaErregistratu(gertaera_kopurua) {
+  if (gertaera_kopurua != null) {
+    localStorage.setItem(ESPORTAZIO_GAKOA, String(gertaera_kopurua));
+  }
 }
 
 document.getElementById("s-gailu-izena").onclick = async () => {
@@ -916,6 +1037,14 @@ document.getElementById("s-esportatu").onclick = async () => {
       blob = await erantzuna.blob();
     }
 
+    // Esportazioa bete da (partekatuta izan edo deskargatuta): esportatze-data
+    // erregistratu, "aldaketak daude" oharra desagerrarazteko.
+    if (PYODIDE_MODUA) {
+      const s = await RootPy.deitu("/api/sinkro/egoera");
+      esportazioaErregistratu(s.gertaerak);
+      await sinkroKargatu();
+    }
+
     // Mobilean partekatze-menua askoz erosoagoa da: Telegramera edo postara
     // zuzenean doa, deskargen karpetatik bila ibili gabe.
     const fitxategia = new File([blob], izena, { type: "application/json" });
@@ -937,24 +1066,55 @@ document.getElementById("s-esportatu").onclick = async () => {
 };
 
 document.getElementById("s-inportatu-botoia").onclick = () => document.getElementById("s-fitxategia").click();
+// Fitxategi-hautatzailetik zein partekatze-menutik (Telegram...) datorren
+// inportazioak bide bera jarraitzen du: hemen dago logika bakarra.
+async function fitxategiaInportatu(byteak) {
+  const r = await api("/api/sinkro/inportatu", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: byteak,
+  });
+  const baztertuak = (r.baztertuak || []).length;
+  mezua(`${r.iturria}-ren fitxategia inportatuta: ${r.berriak} gertaera berri ` +
+        `(${r.guztira} guztira${baztertuak ? `, ${baztertuak} baliogabe baztertuta` : ""}). ` +
+        "Babeskopia bat egin da aurretik.");
+  await hasieratu();
+  await sinkroKargatu();
+}
+
 document.getElementById("s-fitxategia").onchange = async (ev) => {
   const fitxategia = ev.target.files[0];
   if (!fitxategia) return;
   try {
-    const r = await api("/api/sinkro/inportatu", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: await fitxategia.arrayBuffer(),
-    });
-    const baztertuak = (r.baztertuak || []).length;
-    mezua(`${r.iturria}-ren fitxategia inportatuta: ${r.berriak} gertaera berri ` +
-          `(${r.guztira} guztira${baztertuak ? `, ${baztertuak} baliogabe baztertuta` : ""}). ` +
-          "Babeskopia bat egin da aurretik.");
-    await hasieratu();
-    await sinkroKargatu();
+    await fitxategiaInportatu(await fitxategia.arrayBuffer());
   } catch (e) { mezua(e.message, false); }
   ev.target.value = "";
 };
+
+// Beste app batetik (Telegram, posta...) «Partekatu → Root Erregistroa»
+// sakatuta iritsitako fitxategia. `sw.js`-k (`share_target`) aldi baterako
+// cache batean utzi du eta `?partekatuta=1`-ekin birbideratu gaitu hona.
+async function partekatzeaEgiaztatu() {
+  const url = new URL(location.href);
+  if (url.searchParams.get("partekatuta") !== "1") return;
+  // URLa garbitu berehala: birkargatzeak ez du berriz inportatu behar.
+  history.replaceState(null, "", url.pathname);
+
+  if (!("caches" in window)) return;
+  try {
+    // Izen hauek `sw.js`-eko PARTEKATZE_CACHE / PARTEKATZE_GAKOA-rekin bat
+    // etorri behar dute: SWk hor uzten du fitxategia, hemen jasotzen da.
+    const c = await caches.open("root-partekatzea");
+    const erantzuna = await c.match("./partekatutako-fitxategia");
+    if (!erantzuna) {
+      mezua("Partekatutako fitxategia ez da iritsi. Erabili Inportatu botoia.", false);
+      return;
+    }
+    await c.delete("./partekatutako-fitxategia");
+    await fitxategiaInportatu(await erantzuna.arrayBuffer());
+    atalaErakutsi("sinkro");
+  } catch (e) { mezua(e.message, false); }
+}
 
 // ─── Babeskopiak ───────────────────────────────────────────────────────────
 
@@ -968,7 +1128,7 @@ async function kopiakKargatu() {
         el("td", { klasea: "zenb txiki", testua: Math.round(k.tamaina / 1024) + " KB" }),
         el("td", { klasea: "txiki", testua: new Date(k.noiz * 1000).toLocaleString("eu") }),
         el("td", {}, [el("button", {
-          klasea: "botoia arriskua", estiloa: "padding:3px 10px;font-size:12px", testua: "Leheneratu",
+          klasea: "botoia arriskua botoia-mini", testua: "Leheneratu",
           onclick: async () => {
             if (!confirm(`"${k.izena}" leheneratu? Uneko egoeraren kopia bat egingo da lehenik.`)) return;
             try {
@@ -1025,38 +1185,64 @@ async function abiarazi() {
   }
 
   // Mobila: Python nabigatzailean kargatu behar da ezer erakutsi aurretik.
-  // Lehen aldian pisutsua da (~10 MB); ondoren cachetik dator eta offline dabil.
+  // Lehen aldian pisutsua da (~10 MB); ondoren cachetik dator eta offline dabil
+  // (service worker-ak cacheatzen ditu). Aurrerapen-barra urratsez urrats da:
+  // Pyodide-k ez du byte-mailako aurrerapenik ematen.
   const oharra = document.getElementById("mezua");
-  const erakutsi = (t) => {
-    oharra.textContent = "";
-    oharra.appendChild(el("div", { klasea: "mezua ondo", testua: t }));
+  const testua = el("div", {});
+  const barraOsagaia = el("i", { estiloa: "width:0%" });
+  const barra = el("div", { klasea: "barra", estiloa: "margin-top:8px" }, [barraOsagaia]);
+  const kutxa = el("div", { klasea: "mezua ondo" }, [testua, barra]);
+
+  const erakutsi = (t, urratsa, guztira) => {
+    testua.textContent = t;
+    if (urratsa && guztira) {
+      barra.style.display = "";
+      barraOsagaia.style.width = `${Math.round((urratsa / guztira) * 100)}%`;
+    } else {
+      barra.style.display = "none";
+    }
+    if (!kutxa.isConnected) { oharra.textContent = ""; oharra.appendChild(kutxa); }
   };
 
-  try {
-    // Mobileko kodea hemen kargatzen da, ez orria irekitzean: mahaigainean
-    // fitxategi hau ez da existitzen ere.
-    erakutsi("Kargatzen…");
-    await new Promise((ondo, gaizki) => {
-      const s = document.createElement("script");
-      s.src = "pyodide-abioa.js";
-      s.onload = ondo;
-      s.onerror = () => gaizki(new Error("ezin izan da mobileko kodea kargatu"));
-      document.head.appendChild(s);
-    });
+  async function saiatu() {
+    try {
+      erakutsi("Kargatzen…");
+      // Mobileko kodea hemen kargatzen da, ez orria irekitzean: mahaigainean
+      // fitxategi hau ez da existitzen ere.
+      await new Promise((ondo, gaizki) => {
+        const s = document.createElement("script");
+        s.src = "pyodide-abioa.js";
+        s.onload = ondo;
+        s.onerror = () => gaizki(new Error("ezin izan da mobileko kodea kargatu"));
+        document.head.appendChild(s);
+      });
 
-    await RootPy.abiarazi(erakutsi);
+      await RootPy.abiarazi(erakutsi);
 
-    // Babeskopiak ez daude mobilean: fitxategi-sistema behar dute, eta ez dute
-    // zentzurik hemen (mahaigainak ditu kopiak, eta bateratzeak ez du ezer
-    // ezabatzen). Ordezkoa `Esportatu fitxategia` da.
-    document.querySelector('[data-atala="babeskopiak"]').remove();
-    document.getElementById("atal-babeskopiak").remove();
-    oharra.textContent = "";
-    await hasieratu();
-  } catch (e) {
-    erakutsi("");
-    mezua("Ezin izan da abiarazi: " + e.message, false);
+      // Babeskopiak ez daude mobilean: fitxategi-sistema behar dute, eta ez dute
+      // zentzurik hemen (mahaigainak ditu kopiak, eta bateratzeak ez du ezer
+      // ezabatzen). Ordezkoa `Esportatu fitxategia` da.
+      document.querySelector('[data-atala="babeskopiak"]')?.remove();
+      document.getElementById("atal-babeskopiak")?.remove();
+      oharra.textContent = "";
+      await hasieratu();
+      biltegiaEgiaztatu();
+      await partekatzeaEgiaztatu();
+    } catch (e) {
+      oharra.textContent = "";
+      oharra.appendChild(el("div", { klasea: "mezua gaizki" }, [
+        el("div", { testua: "Ezin izan da abiarazi: " + e.message }),
+        el("button", {
+          klasea: "botoia isila", estiloa: "margin-top:8px",
+          testua: "Berriro saiatu",
+          onclick: saiatu,
+        }),
+      ]));
+    }
   }
+
+  await saiatu();
 }
 
 abiarazi();
